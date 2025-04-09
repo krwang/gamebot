@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+
+{% block title %}GameBot - Game Analysis{% endblock %}
+
+{% block head_styles %}
+<style>
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+.back-link {
+    display: block;
+    margin-bottom: 20px;
+    color: #4CAF50;
+    text-decoration: none;
+}
+.back-link:hover {
+    text-decoration: underline;
+}
+.analysis-form {
+    margin-bottom: 30px;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+}
+.form-group {
+    margin-bottom: 15px;
+}
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+.form-group select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+.form-group textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    height: 100px;
+    resize: vertical;
+}
+.button {
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+.button:hover {
+    background-color: #45a049;
+}
+.select-buttons {
+    margin-top: 5px;
+    margin-bottom: 10px;
+    display: flex;
+    gap: 10px;
+}
+.select-button {
+    padding: 5px 10px;
+    font-size: 14px;
+    cursor: pointer;
+    background-color: #e9e9e9;
+    color: #333;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+.select-button:hover {
+    background-color: #d9d9d9;
+}
+.analysis-result {
+    margin-top: 20px;
+    padding: 20px;
+    background-color: white;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+    white-space: pre-wrap;
+}
+.loading {
+    display: none;
+    text-align: center;
+    margin: 20px 0;
+}
+.loading-spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #4CAF50;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+#loading-spinner {
+    display: none;
+    text-align: center;
+    margin: 20px 0;
+}
+.analysis-content {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 20px;
+    margin-top: 20px;
+}
+.error-message {
+    background: #fee;
+    border: 1px solid #fcc;
+    color: #c00;
+    padding: 15px;
+    border-radius: 4px;
+    margin-top: 20px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <a href="/games" class="back-link">← Back to Game History</a>
+    <h1>Game Analysis</h1>
+    
+    <div class="analysis-form">
+        <form id="analysisForm">
+            <div class="form-group">
+                <label for="gameType">Select Game Type:</label>
+                <select id="gameType" name="gameType">
+                    <option value="tictactoe">Tic Tac Toe</option>
+                    <option value="rockpaperscissors">Rock Paper Scissors</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="gameIds">Select Games to Analyze:</label>
+                <select id="gameIds" name="gameIds" multiple required>
+                    <!-- Game options will be populated dynamically -->
+                </select>
+                <div class="select-buttons">
+                    <button type="button" id="selectAllBtn" class="select-button">Select All</button>
+                    <button type="button" id="clearSelectionBtn" class="select-button">Clear Selection</button>
+                </div>
+                <small>Hold Ctrl/Cmd to select multiple games</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="question">What would you like to know about these games?</label>
+                <textarea id="question" name="question" required>What patterns do you see in my gameplay? How could I improve my strategy?</textarea>
+            </div>
+            
+            <button type="submit" class="button">Analyze Games</button>
+        </form>
+    </div>
+    
+    <div class="loading">
+        <div class="loading-spinner"></div>
+        <p>Analyzing your games...</p>
+    </div>
+    
+    <div id="analysisResult" class="analysis-result" style="display: none;"></div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('analysisForm');
+    const analysisResult = document.getElementById('analysisResult');
+    const loadingDiv = document.querySelector('.loading');
+    const gameTypeSelect = document.getElementById('gameType');
+    const gameIdsSelect = document.getElementById('gameIds');
+    const questionTextarea = document.getElementById('question');
+    const selectAllBtn = document.getElementById('selectAllBtn');
+    const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+    
+    // Select All button functionality
+    selectAllBtn.addEventListener('click', function() {
+        Array.from(gameIdsSelect.options).forEach(option => {
+            if (!option.disabled) {
+                option.selected = true;
+            }
+        });
+    });
+    
+    // Clear Selection button functionality
+    clearSelectionBtn.addEventListener('click', function() {
+        Array.from(gameIdsSelect.options).forEach(option => {
+            option.selected = false;
+        });
+    });
+    
+    // Default questions by game type
+    const defaultQuestions = {
+        'tictactoe': 'What patterns do you see in my gameplay? How could I improve my strategy? What mistakes am I consistently making?',
+        'rockpaperscissors': 'What patterns do you notice in my choices? Am I too predictable? How can I make better strategic decisions?'
+    };
+    
+    // Function to load games of selected type
+    async function loadGames(gameType) {
+        try {
+            // Clear existing options
+            gameIdsSelect.innerHTML = '<option value="">Loading games...</option>';
+            
+            // Fetch games of the selected type
+            const response = await fetch(`/api/recent-games?game_type=${gameType}&limit=50`);
+            const data = await response.json();
+            
+            if (response.ok && data.games && data.games.length > 0) {
+                // Clear loading option
+                gameIdsSelect.innerHTML = '';
+                
+                // Add options for each completed game
+                data.games.forEach(game => {
+                    if (game.end_time) {  // Only include completed games
+                        const option = document.createElement('option');
+                        option.value = game.id;
+                        
+                        let gameResult = game.winner ? `Winner: ${game.winner}` : 'Tie Game';
+                        let gameDate = game.end_time ? new Date(game.end_time).toLocaleDateString() : 'Unknown date';
+                        
+                        option.textContent = `Game #${game.id} - ${gameResult} (${gameDate})`;
+                        gameIdsSelect.appendChild(option);
+                    }
+                });
+                
+                if (gameIdsSelect.options.length === 0) {
+                    gameIdsSelect.innerHTML = '<option value="" disabled>No completed games found</option>';
+                }
+            } else {
+                gameIdsSelect.innerHTML = '<option value="" disabled>No games available</option>';
+            }
+        } catch (error) {
+            console.error('Error loading games:', error);
+            gameIdsSelect.innerHTML = '<option value="" disabled>Error loading games</option>';
+        }
+    }
+    
+    // Update question text based on game type
+    gameTypeSelect.addEventListener('change', function() {
+        const selectedGameType = gameTypeSelect.value;
+        
+        // Update the question text
+        questionTextarea.value = defaultQuestions[selectedGameType] || defaultQuestions['tictactoe'];
+        
+        // Load games of the selected type
+        loadGames(selectedGameType);
+    });
+    
+    // Load initial games when page loads
+    loadGames(gameTypeSelect.value);
+    
+    // Form submission handler
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Get selected game IDs from the select element
+        const selectedGames = Array.from(gameIdsSelect.selectedOptions)
+            .map(option => option.value);
+            
+        if (selectedGames.length === 0) {
+            alert('Please select at least one game to analyze.');
+            return;
+        }
+
+        // Get the analysis question
+        const question = questionTextarea.value.trim();
+        if (!question) {
+            alert('Please enter a question for analysis.');
+            return;
+        }
+
+        // Show loading state
+        loadingDiv.style.display = 'block';
+        analysisResult.style.display = 'none';
+        
+        try {
+            const response = await fetch('/api/analyze-games', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    game_ids: selectedGames,
+                    question: question,
+                    game_type: gameTypeSelect.value
+                })
+            });
+
+            const data = await response.json();
+            
+            if (response.ok) {
+                // Format and display the analysis
+                analysisResult.innerHTML = `
+                    <div class="analysis-content">
+                        <h3>Analysis Results</h3>
+                        <p>${data.analysis.replace(/\n/g, '<br>')}</p>
+                    </div>`;
+                analysisResult.style.display = 'block';
+            } else {
+                throw new Error(data.error || 'Failed to analyze games');
+            }
+        } catch (error) {
+            analysisResult.innerHTML = `
+                <div class="error-message">
+                    Error: ${error.message}
+                </div>`;
+            analysisResult.style.display = 'block';
+        } finally {
+            loadingDiv.style.display = 'none';
+        }
+    });
+});
+</script>
+{% endblock %} 
