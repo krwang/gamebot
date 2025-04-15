@@ -1,6 +1,9 @@
 import random
+import os
+import torch
 from games.game_base import Game
 from game_history import GameHistory
+from .rps_model import load_trained_model, predict_next_move, train_model
 
 class RockPaperScissorsGame(Game):
     # Define the valid choices
@@ -36,10 +39,12 @@ class RockPaperScissorsGame(Game):
             "round": 1,
             "player_score": 0,
             "ai_score": 0,
-            "result": None
+            "draws": 0,
+            "result": None,
+            "custom_ai_model": None
         }
     
-    def create_game_state(self, game_history, player_symbol=None):
+    def create_game_state(self, game_history, player_symbol=None, custom_ai_model=None):
         """Create a new game state for Rock Paper Scissors"""
         # Start new game with game type (player_symbol isn't relevant here but we'll use "Player")
         game_history.start_new_game(self.get_game_type(), "Player")
@@ -52,9 +57,11 @@ class RockPaperScissorsGame(Game):
             'game_over': False,
             'winner': None,
             'history': game_history,
-            'game_type': self.get_game_type(),
-            'max_rounds': 5  # Best of 5 rounds
+            'game_type': self.get_game_type()
         }
+        
+        # Set custom AI model if provided
+        game_state['board']['custom_ai_model'] = custom_ai_model
         
         return game_state
     
@@ -62,7 +69,19 @@ class RockPaperScissorsGame(Game):
         """Resume a Rock Paper Scissors game from stored data"""
         # Get the last state of the game
         last_move = game_data['moves'][-1] if game_data['moves'] else None
-        board_state = last_move['board_state'] if last_move else self.initialize_game()
+        
+        # Initialize a new board state
+        board_state = self.initialize_game()
+        
+        # If there was a previous move, update the board state with its values
+        if last_move and 'board_state' in last_move:
+            prev_state = last_move['board_state']
+            board_state.update({
+                'player_score': prev_state.get('player_score', 0),
+                'ai_score': prev_state.get('ai_score', 0),
+                'draws': prev_state.get('draws', 0),
+                'round': prev_state.get('round', 1)
+            })
         
         game_state = {
             'board': board_state,
@@ -72,41 +91,15 @@ class RockPaperScissorsGame(Game):
             'game_over': False,
             'winner': None,
             'history': game_history,
-            'game_type': self.get_game_type(),
-            'max_rounds': 5  # Best of 5 rounds
+            'game_type': self.get_game_type()
         }
         
         return game_state
     
     def check_game_over(self, game_state):
-        """Check if the game is over (reached max rounds or player/AI has majority wins)"""
-        board = game_state['board']
-        player_score = board['player_score']
-        ai_score = board['ai_score']
-        current_round = board['round']
-        max_rounds = game_state['max_rounds']
-        
-        # Check if either player has a majority of wins
-        majority_threshold = (max_rounds // 2) + 1
-        
-        if player_score >= majority_threshold:
-            return True, game_state['player_symbol']
-        
-        if ai_score >= majority_threshold:
-            return True, game_state['ai_symbol']
-        
-        # Check if we've played all rounds
-        if current_round > max_rounds:
-            # Determine winner based on score
-            if player_score > ai_score:
-                return True, game_state['player_symbol']
-            elif ai_score > player_score:
-                return True, game_state['ai_symbol']
-            else:
-                return True, None  # Tie
-        
-        # Game still in progress
-        return False, None
+        """Check if the game is over (only when explicitly ended)"""
+        # Game only ends when explicitly ended by the player
+        return game_state['game_over'], game_state['winner']
     
     def make_player_move(self, game_state, move_data):
         """Process player's choice in Rock Paper Scissors"""
@@ -134,6 +127,9 @@ class RockPaperScissorsGame(Game):
             'result': game_state['board']['result']
         }
         
+        # Increment round before recording the move
+        game_state['board']['round'] += 1
+        
         game_state['history'].record_move(
             game_state['player_symbol'],
             None,  # No position for RPS
@@ -141,27 +137,13 @@ class RockPaperScissorsGame(Game):
             move_data
         )
         
-        # Prepare for next round
-        game_state['board']['round'] += 1
-        game_state['board']['player_choice'] = None
-        game_state['board']['ai_choice'] = None
-        game_state['board']['result'] = None
-        
-        # Check if game is over
-        is_over, winner = self.check_game_over(game_state)
-        if is_over:
-            game_state['game_over'] = True
-            game_state['winner'] = winner
-            
-            if winner:
-                game_state['history'].end_game('win', winner)
-            else:
-                game_state['history'].end_game('tie')
-        
         return game_state, True
     
     def _make_ai_choice(self, game_state):
-        """AI makes a random choice"""
+        """AI makes a choice using the custom model if available, otherwise random"""
+        board = game_state['board']
+        
+        # For now, just use random choice
         ai_choice = random.choice(self.CHOICES)
         game_state['board']['ai_choice'] = ai_choice
     
@@ -183,9 +165,30 @@ class RockPaperScissorsGame(Game):
         else:
             # Tie
             game_state['board']['result'] = "tie"
+            game_state['board']['draws'] = game_state['board'].get('draws', 0) + 1
     
     def make_ai_move(self, game_state):
         """AI moves are handled within make_player_move for this game"""
         # In Rock Paper Scissors, AI makes its move right after the player
         # This is already handled in make_player_move
-        return game_state, False 
+        return game_state, False
+    
+    def train_custom_ai(self, game_id, model_path):
+        """Train a custom AI model based on a specific game"""
+        storage = GameStorage()
+        game_data = storage.get_game_as_json(game_id)
+        
+        if not game_data:
+            return False, "Game not found"
+        
+        try:
+            # Train the model
+            model = train_model([game_data])
+            
+            # Save the model
+            os.makedirs(os.path.dirname(model_path), exist_ok=True)
+            torch.save(model, model_path)
+            
+            return True, model_path
+        except Exception as e:
+            return False, str(e) 

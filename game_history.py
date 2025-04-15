@@ -44,7 +44,7 @@ class GameHistory:
     
     def get_game(self, game_id):
         """Get a specific game by ID"""
-        return self.storage.get_game_as_json(game_id)
+        return self.storage.get_game(game_id)
     
     def close(self):
         """Close the storage connection"""

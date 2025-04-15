@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rock-Paper-Scissors Game</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: #f5f7fa;
+            min-height: 100vh;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+        .welcome-message {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .welcome-message h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: #2c3e50;
+        }
+        .welcome-message p {
+            font-size: 1.2rem;
+            color: #34495e;
+            margin-bottom: 0.5rem;
+        }
+        .game-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .choice-btn {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            margin: 1rem;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            border: 2px solid #dee2e6;
+            background: white;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        .choice-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+            border-color: #1a73e8;
+        }
+        .choice-btn:active {
+            transform: translateY(0);
+        }
+        .btn-primary {
+            background: #3498db;
+        }
+        .btn-success {
+            background: #2ecc71;
+        }
+        .btn-danger {
+            background: #e74c3c;
+        }
+        .result {
+            font-size: 2rem;
+            text-align: center;
+            margin: 1rem 0;
+            padding: 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            background-color: rgba(73, 80, 87, 0.1);
+            color: #495057;
+        }
+        .result.win {
+            color: #1e7e34;
+            background-color: rgba(30, 126, 52, 0.15);
+        }
+        .result.lose {
+            color: #c82333;
+            background-color: rgba(200, 35, 51, 0.15);
+        }
+        .result.tie {
+            color: #495057;
+            background-color: rgba(73, 80, 87, 0.15);
+        }
+        .result .choices {
+            font-size: 1.5rem;
+            margin-top: 0.75rem;
+            font-weight: 500;
+        }
+        .score {
+            font-size: 1.5rem;
+            text-align: center;
+            margin: 1rem 0;
+            color: #2c3e50;
+            font-weight: bold;
+        }
+        .game-stats {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+        .stat-card {
+            text-align: center;
+        }
+        .stat-card h3 {
+            font-size: 2rem;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+        .stat-card .player-wins {
+            color: #1e7e34;  /* Green for player wins */
+        }
+        .stat-card .ai-wins {
+            color: #c82333;  /* Red for AI wins */
+        }
+        .stat-card .draws {
+            color: #495057;  /* Dark gray for draws */
+        }
+        .stat-card p {
+            color: #7f8c8d;
+            margin: 0;
+        }
+        .model-info {
+            text-align: center;
+            margin: 2rem 0;
+            padding: 1rem;
+            background: #ecf0f1;
+            border-radius: 8px;
+        }
+        .model-info h5 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+        .model-info p {
+            color: #7f8c8d;
+            margin-bottom: 0.5rem;
+        }
+        .analysis-section {
+            margin: 2rem 0;
+            padding: 1rem;
+            background: #ecf0f1;
+            border-radius: 8px;
+        }
+        .analysis-section h3 {
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        .pattern-item {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: white;
+            border-radius: 8px;
+        }
+        .pattern-item h5 {
+            color: #3498db;
+            margin-bottom: 0.5rem;
+        }
+        .pattern-item p {
+            color: #7f8c8d;
+            margin-bottom: 0.5rem;
+        }
+        .pattern-item .confidence {
+            font-weight: bold;
+            color: #2ecc71;
+        }
+        .suggestions {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: white;
+            border-radius: 8px;
+        }
+        .suggestions h5 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+        .suggestions ul {
+            margin-bottom: 0;
+        }
+        .suggestions li {
+            color: #7f8c8d;
+            margin-bottom: 0.5rem;
+        }
+        .suggestions li:last-child {
+            margin-bottom: 0;
+        }
+        .end-game-btn {
+            background-color: #c82333;
+            border-color: #c82333;
+            margin-top: 2rem;
+        }
+        .end-game-btn:hover {
+            background-color: #bd2130;
+            border-color: #b21f2d;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="welcome-message">
+            <h1>Welcome to Rock-Paper-Scissors!</h1>
+            <p>Play against our AI opponent and see if you can outsmart it!</p>
+            <p>Choose your move by clicking one of the buttons below.</p>
+            <p>The AI will analyze your moves and try to predict your next choice.</p>
+        </div>
+
+        <div id="score" class="score">Round 1</div>
+
+        <div class="d-flex justify-content-center mb-4">
+            <button class="choice-btn" onclick="makeMove('rock')">✊</button>
+            <button class="choice-btn" onclick="makeMove('paper')">✋</button>
+            <button class="choice-btn" onclick="makeMove('scissors')">✌️</button>
+        </div>
+
+        <div id="result" class="result">
+            Choose one of the above 👆 to get started!
+        </div>
+
+        <div class="game-stats">
+            <div class="stat-card">
+                <h3 id="playerWins" class="player-wins">0</h3>
+                <p>Your Wins</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="aiWins" class="ai-wins">0</h3>
+                <p>AI Wins</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="draws" class="draws">0</h3>
+                <p>Draws</p>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-center">
+            <button class="btn btn-danger end-game-btn" onclick="endGame()">End Game</button>
+        </div>
+
+        <div class="analysis-section" id="analysisSection" style="display: none;">
+            <h3>Game Analysis</h3>
+            <div id="patterns">
+                <!-- Patterns will be populated here -->
+            </div>
+            <div class="suggestions">
+                <h5>Suggestions</h5>
+                <ul id="suggestions">
+                    <!-- Suggestions will be populated here -->
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let gameId = null;
+        let currentRound = 0;
+        let playerWins = 0;
+        let aiWins = 0;
+        let draws = 0;
+        let moveHistory = [];
+
+        async function startGame() {
+            console.log('Starting new game...');
+            try {
+                const response = await fetch('/api/new-game', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ game_type: 'rockpaperscissors' })
+                });
+                const data = await response.json();
+                console.log('Game started with data:', data);
+                gameId = data.game_id;
+                console.log('Set gameId to:', gameId);
+            } catch (error) {
+                console.error('Error starting game:', error);
+            }
+        }
+
+        async function makeMove(playerChoice) {
+            console.log('Making move with gameId:', gameId);
+            if (!gameId) {
+                console.log('No gameId found, starting new game...');
+                await startGame();
+            }
+
+            try {
+                const requestBody = {
+                    game_id: gameId,
+                    choice: playerChoice
+                };
+                console.log('Sending move request:', requestBody);
+                const response = await fetch('/api/move', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                const data = await response.json();
+                
+                if (data.error) {
+                    console.error('Error making move:', data.error);
+                    document.getElementById('result').innerHTML = `Error: ${data.error}`;
+                    return;
+                }
+                
+                // Update the game state
+                const board = data.board;
+                console.log('Received board state:', board);
+                
+                // Get emoji for choices
+                const choiceEmojis = {
+                    'rock': '✊',
+                    'paper': '✋',
+                    'scissors': '✌️'
+                };
+                
+                // Show the result
+                const resultDiv = document.getElementById('result');
+                let resultText = '';
+                let resultClass = '';
+                
+                if (board.result === 'player_win') {
+                    resultText = `You won! 🎉`;
+                    resultClass = 'win';
+                } else if (board.result === 'ai_win') {
+                    resultText = `You lost! 😢`;
+                    resultClass = 'lose';
+                } else if (board.result === 'tie') {
+                    resultText = `It's a tie! 🤝`;
+                    resultClass = 'tie';
+                }
+                
+                // Update the display
+                resultDiv.className = `result ${resultClass}`;
+                resultDiv.innerHTML = `
+                    <div>${resultText}</div>
+                    <div class="choices">
+                        You chose: ${choiceEmojis[board.player_choice]} | 
+                        AI chose: ${choiceEmojis[board.ai_choice]}
+                    </div>
+                `;
+                
+                // Update scores directly from the board state
+                document.getElementById('score').textContent = `Round ${board.round}`;
+                document.getElementById('playerWins').textContent = board.player_score;
+                document.getElementById('aiWins').textContent = board.ai_score;
+                document.getElementById('draws').textContent = board.draws;
+                
+            } catch (error) {
+                console.error('Error making move:', error);
+                document.getElementById('result').innerHTML = `Error: ${error.message}`;
+            }
+        }
+
+        async function endGame() {
+            if (!gameId) return;
+            
+            try {
+                const response = await fetch(`/api/end-game/${gameId}`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                }
+            } catch (error) {
+                console.error('Error ending game:', error);
+            }
+        }
+
+        function updateGameState(data) {
+            document.getElementById('result').textContent = data.result;
+            document.getElementById('score').textContent = `Round ${data.current_round}`;
+            
+            if (data.winner === 'player') playerWins++;
+            else if (data.winner === 'ai') aiWins++;
+            else if (data.winner === 'draw') draws++;
+            
+            document.getElementById('playerWins').textContent = playerWins;
+            document.getElementById('aiWins').textContent = aiWins;
+            document.getElementById('draws').textContent = draws;
+        }
+
+        function updateMoveHistory(data) {
+            const moveHistoryDiv = document.getElementById('moveHistory');
+            const moveItem = document.createElement('div');
+            moveItem.className = 'move-item';
+            
+            const timestamp = new Date().toLocaleTimeString();
+            moveItem.innerHTML = `
+                <span class="player">You: ${data.player_move}</span> vs 
+                <span class="ai">AI: ${data.ai_move}</span> - 
+                <span class="result">${data.result}</span>
+                <span class="timestamp">${timestamp}</span>
+            `;
+            
+            moveHistoryDiv.insertBefore(moveItem, moveHistoryDiv.firstChild);
+            moveHistory.unshift({
+                player: data.player_move,
+                ai: data.ai_move,
+                result: data.result,
+                timestamp: timestamp
+            });
+        }
+
+        function updateAnalysis(data) {
+            if (data.analysis) {
+                const analysisSection = document.getElementById('analysisSection');
+                analysisSection.style.display = 'block';
+                
+                const patternsDiv = document.getElementById('patterns');
+                patternsDiv.innerHTML = '';
+                
+                data.analysis.patterns.forEach(pattern => {
+                    const patternItem = document.createElement('div');
+                    patternItem.className = 'pattern-item';
+                    patternItem.innerHTML = `
+                        <h5>${pattern.name}</h5>
+                        <p>${pattern.description}</p>
+                        <p>Confidence: <span class="confidence">${pattern.confidence}%</span></p>
+                    `;
+                    patternsDiv.appendChild(patternItem);
+                });
+                
+                const suggestionsList = document.getElementById('suggestions');
+                suggestionsList.innerHTML = '';
+                
+                data.analysis.suggestions.forEach(suggestion => {
+                    const li = document.createElement('li');
+                    li.textContent = suggestion;
+                    suggestionsList.appendChild(li);
+                });
+            }
+        }
+    </script>
+</body>
+</html> 

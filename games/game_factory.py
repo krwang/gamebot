@@ -29,14 +29,16 @@ class GameFactory:
         # Get the game data from storage
         game_data = storage.get_game_as_json(game_id)
         if not game_data:
-            return None
+            return None, None
         
         # Get the game type
         game_type = game_data["game_type"]
         
         # Create an instance of the appropriate game class
-        return cls.create_game(game_type) 
+        game_instance = cls.create_game(game_type)
         
+        return game_instance, game_data
+    
     @classmethod
     def resume_game_state(cls, game_id, storage):
         """Resume a game with its state from storage"""

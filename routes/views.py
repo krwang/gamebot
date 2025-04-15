@@ -5,11 +5,7 @@ views_bp = Blueprint('views', __name__)
 
 @views_bp.route('/')
 def index():
-    return render_template('index.html')
-
-@views_bp.route('/rockpaperscissors')
-def rockpaperscissors():
-    return render_template('rockpaperscissors.html')
+    return render_template('game.html')
 
 @views_bp.route('/games')
 def game_history():

@@ -33,7 +33,11 @@ class GameStorage:
                     end_time TEXT,
                     outcome TEXT,
                     winner TEXT,
-                    player_symbol TEXT
+                    player_symbol TEXT,
+                    player_score INTEGER DEFAULT 0,
+                    ai_score INTEGER DEFAULT 0,
+                    draws INTEGER DEFAULT 0,
+                    game_data TEXT
                 )
             """)
             
@@ -52,17 +56,24 @@ class GameStorage:
                 )
             """)
             
-            # Check if game_type column exists, if not add it
-            try:
-                # This query will fail if the game_type column doesn't exist
-                conn.execute("SELECT game_type FROM games LIMIT 1")
-            except sqlite3.OperationalError as e:
-                # Add the game_type column
-                print(f"Database upgrade needed: {str(e)}")
-                print("Upgrading database: Adding game_type column to games table")
-                conn.execute("ALTER TABLE games ADD COLUMN game_type TEXT DEFAULT 'tictactoe'")
-                print("Database schema has been upgraded successfully")
-                conn.commit()
+            # Check if all required columns exist, if not add them
+            required_columns = {
+                'game_type': 'TEXT DEFAULT "rockpaperscissors"',
+                'player_score': 'INTEGER DEFAULT 0',
+                'ai_score': 'INTEGER DEFAULT 0',
+                'draws': 'INTEGER DEFAULT 0',
+                'game_data': 'TEXT'
+            }
+            
+            for column, type_def in required_columns.items():
+                try:
+                    # This query will fail if the column doesn't exist
+                    conn.execute(f"SELECT {column} FROM games LIMIT 1")
+                except sqlite3.OperationalError:
+                    print(f"Adding missing column {column} to games table")
+                    conn.execute(f"ALTER TABLE games ADD COLUMN {column} {type_def}")
+                    print(f"Added column {column}")
+                    conn.commit()
 
     def start_game(self, game_type, player_symbol: str) -> int:
         """Create a new game record and return its ID"""
@@ -78,6 +89,16 @@ class GameStorage:
         """Record a move in the database"""
         row, col = position if position else (None, None)
         move_data_json = json.dumps(move_data) if move_data else json.dumps({})
+        
+        # Update game scores if they exist in the board state
+        if 'player_score' in board_state and 'ai_score' in board_state and 'draws' in board_state:
+            conn = self._get_conn()
+            with conn:
+                conn.execute("""
+                    UPDATE games 
+                    SET player_score = ?, ai_score = ?, draws = ?
+                    WHERE id = ?
+                """, (board_state['player_score'], board_state['ai_score'], board_state['draws'], game_id))
         
         conn = self._get_conn()
         with conn:
@@ -124,25 +145,42 @@ class GameStorage:
             ORDER BY timestamp
         """, (game_id,)).fetchall()
         
+        # Get game data if it exists
+        game_data = None
+        if game["game_data"]:
+            try:
+                game_data = json.loads(game["game_data"])
+            except json.JSONDecodeError:
+                game_data = None
+        
         # Convert to JSON format
-        return {
+        result = {
             "id": game["id"],
-            "game_type": game["game_type"],
-            "start_time": game["start_time"],
-            "end_time": game["end_time"],
-            "outcome": game["outcome"],
-            "winner": game["winner"],
-            "player_symbol": game["player_symbol"],
-            "ai_symbol": "O" if game["player_symbol"] == "X" else "X",
+            "game_type": game["game_type"] if "game_type" in game.keys() else "rockpaperscissors",
+            "start_time": game["start_time"] if "start_time" in game.keys() else datetime.now().isoformat(),
+            "end_time": game["end_time"] if "end_time" in game.keys() else None,
+            "outcome": game["outcome"] if "outcome" in game.keys() else None,
+            "winner": game["winner"] if "winner" in game.keys() else None,
+            "player_symbol": game["player_symbol"] if "player_symbol" in game.keys() else "Player",
+            "ai_symbol": "AI",
+            "player_score": game["player_score"] if "player_score" in game.keys() else 0,
+            "ai_score": game["ai_score"] if "ai_score" in game.keys() else 0,
+            "draws": game["draws"] if "draws" in game.keys() else 0,
             "moves": [{
                 "player": move["player"],
                 "position": [move["position_row"], move["position_col"]] if move["position_row"] is not None else None,
                 "move_data": json.loads(move["move_data"]),
                 "board_state": json.loads(move["board_state"]),
                 "timestamp": move["timestamp"],
-                "is_player_move": move["player"] == game["player_symbol"]
+                "is_player_move": move["player"] == (game["player_symbol"] if "player_symbol" in game.keys() else "Player")
             } for move in moves]
         }
+        
+        # Merge game_data if it exists
+        if game_data:
+            result.update(game_data)
+            
+        return result
 
     def get_games_as_json(self, game_type=None, limit=None, offset=0):
         """Retrieve multiple games in JSON format"""
@@ -228,15 +266,30 @@ class GameStorage:
         return None
         
     def get_game(self, game_id):
-        """Get a game by ID regardless of its completion status"""
+        """Retrieve a game by ID"""
         conn = self._get_conn()
         game = conn.execute(
-            "SELECT * FROM games WHERE id = ?", 
-            (game_id,)
+            "SELECT * FROM games WHERE id = ?", (game_id,)
         ).fetchone()
-        if game:
-            return self.get_game_as_json(game["id"])
-        return None
+        
+        if not game:
+            return None
+            
+        return dict(game)
+
+    def update_game(self, game_id, game_data):
+        """Update a game's data in the database"""
+        conn = self._get_conn()
+        with conn:
+            # Convert game_data to JSON string
+            game_data_json = json.dumps(game_data)
+            
+            # Update the game record
+            conn.execute("""
+                UPDATE games 
+                SET game_data = ?
+                WHERE id = ?
+            """, (game_data_json, game_id))
 
     def close(self):
         """Close the database connection for the current thread"""

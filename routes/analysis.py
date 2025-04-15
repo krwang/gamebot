@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, render_template
 
 # Import analyzer and storage
 from game_analysis import GameAnalyzer
@@ -12,6 +12,43 @@ analysis_bp = Blueprint('analysis', __name__)
 storage = GameStorage()
 game_analyzer = GameAnalyzer(api_key=os.getenv('OPENAI_API_KEY'))
 
+@analysis_bp.route('/analyze-game/<game_id>')
+def view_game_analysis(game_id):
+    """Display the analysis of a single game in a formatted HTML page"""
+    try:
+        # Get the game data
+        game_data = storage.get_game(game_id)
+        if not game_data:
+            return render_template('error.html', error='Game not found'), 404
+        
+        # Check if analysis already exists
+        if 'analysis' in game_data:
+            analysis = game_data['analysis']
+        else:
+            # Get the analysis
+            analysis = game_analyzer.analyze_rps_game(game_data)
+            
+            # Store the analysis in the game data
+            game_data['analysis'] = analysis
+            storage.update_game(game_id, game_data)
+            
+        # Format game details
+        game_details = {
+            'id': game_id,
+            'type': game_data['game_type'],
+            'start_time': game_data.get('start_time', 'Unknown'),
+            'end_time': game_data.get('end_time', 'Unknown'),
+            'winner': game_data.get('winner', 'None'),
+            'outcome': game_data.get('outcome', 'Unknown')
+        }
+        
+        return render_template('game_analysis.html', 
+                             game=game_details,
+                             analysis=analysis)
+    except Exception as e:
+        print(f"Error in view_game_analysis: {str(e)}")
+        return render_template('error.html', error=str(e)), 500
+
 @analysis_bp.route('/api/analyze-game/<game_id>', methods=['GET'])
 def analyze_game(game_id):
     try:
@@ -20,16 +57,18 @@ def analyze_game(game_id):
         if not game_data:
             return jsonify({'error': 'Game not found'}), 404
         
-        if game_data['game_type'] == 'tictactoe':
-            # For TicTacToe games, analyze the moves
-            analysis = game_analyzer.analyze_tictactoe_game(game_data)
-            return jsonify({'analysis': analysis})
-        elif game_data['game_type'] == 'rockpaperscissors':
-            # For Rock Paper Scissors games, analyze patterns
-            analysis = game_analyzer.analyze_rps_game(game_data)
-            return jsonify({'analysis': analysis})
+        # Check if analysis already exists
+        if 'analysis' in game_data:
+            analysis = game_data['analysis']
         else:
-            return jsonify({'error': 'Game type not supported for analysis'}), 400
+            # Get the analysis
+            analysis = game_analyzer.analyze_rps_game(game_data)
+            
+            # Store the analysis in the game data
+            game_data['analysis'] = analysis
+            storage.update_game(game_id, game_data)
+            
+        return jsonify({'analysis': analysis})
     except Exception as e:
         print(f"Error in analyze_game: {str(e)}")
         return jsonify({'error': str(e)}), 500
