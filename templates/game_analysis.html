@@ -136,8 +136,13 @@
         .train-ai {
             background: #34a853;
             color: white;
+            opacity: 1;
         }
-        .train-ai:hover {
+        .train-ai:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .train-ai:hover:not(:disabled) {
             background: #2d8f47;
             color: white;
             transform: translateY(-2px);
@@ -152,6 +157,32 @@
             color: white;
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(95,99,104,0.2);
+        }
+        .loading {
+            position: relative;
+            pointer-events: none;
+        }
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
         }
     </style>
 </head>
@@ -188,9 +219,72 @@
 
         <div class="cta-buttons">
             <a href="/rps" class="cta-button play-again">Play Again</a>
-            <button class="cta-button train-ai" disabled>Train AI to Play Like Me in This Game</button>
+            <button class="cta-button train-ai" onclick="trainAI('{{ game.id }}')">Train AI to Play Like Me in This Game</button>
             <a href="/game-history" class="cta-button game-history">Game History</a>
         </div>
     </div>
+
+    <div class="toast-container"></div>
+
+    <script>
+        function showToast(message, type = 'success') {
+            const toastContainer = document.querySelector('.toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-white bg-${type} border-0`;
+            toast.setAttribute('role', 'alert');
+            toast.setAttribute('aria-live', 'assertive');
+            toast.setAttribute('aria-atomic', 'true');
+            
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            
+            toastContainer.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+            
+            toast.addEventListener('hidden.bs.toast', () => {
+                toast.remove();
+            });
+        }
+
+        async function trainAI(gameId) {
+            const trainButton = document.querySelector('.train-ai');
+            trainButton.disabled = true;
+            trainButton.classList.add('loading');
+            
+            try {
+                const response = await fetch('/api/train-ai', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ game_id: gameId })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showToast('AI model trained successfully! Downloading...', 'success');
+                    // Download the model
+                    window.location.href = data.model_url;
+                } else {
+                    showToast(data.error || 'Failed to train AI model', 'danger');
+                }
+            } catch (error) {
+                showToast('An error occurred while training the AI model', 'danger');
+                console.error('Error:', error);
+            } finally {
+                trainButton.disabled = false;
+                trainButton.classList.remove('loading');
+            }
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html> 
