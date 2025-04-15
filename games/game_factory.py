@@ -1,4 +1,3 @@
-from games.tictactoe.game import TicTacToeGame
 from games.rockpaperscissors.game import RockPaperScissorsGame
 
 class GameFactory:
@@ -6,7 +5,6 @@ class GameFactory:
     
     # Dictionary of game types and their respective classes
     _game_types = {
-        "tictactoe": TicTacToeGame,
         "rockpaperscissors": RockPaperScissorsGame
     }
     
@@ -53,16 +51,8 @@ class GameFactory:
         # Create an instance of the appropriate game class
         game_instance = cls.create_game(game_type)
         
-        # Load the game state based on game type
-        if game_type == "tictactoe":
-            # For TicTacToe, load the board and game state
-            game_instance.board = game_data.get("board", [[None, None, None], [None, None, None], [None, None, None]])
-            game_instance.current_player = game_data.get("current_player", "X")
-            game_instance.winner = game_data.get("winner", None)
-            # Don't include the entire game_data in the returned game object
-            return game_instance
-            
-        elif game_type == "rockpaperscissors":
+        # Load the game state based on game type            
+        if game_type == "rockpaperscissors":
             # For Rock Paper Scissors, load the game state
             game_instance.rounds = game_data.get("rounds", [])
             game_instance.player_score = game_data.get("player_score", 0)

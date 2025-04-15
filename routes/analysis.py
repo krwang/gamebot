@@ -109,14 +109,7 @@ def analyze_multiple_games():
             return jsonify({'error': 'All games must be of the same type for analysis'}), 400
             
         # Select the appropriate analysis method based on game type
-        if first_game_type == 'tictactoe':
-            if len(games_data) == 1:
-                # For a single game, use the detailed analysis
-                analysis = game_analyzer.analyze_tictactoe_game(games_data[0])
-            else:
-                # For multiple games, use the multiple game analysis
-                analysis = game_analyzer.analyze_games(games_data, question)
-        elif first_game_type == 'rockpaperscissors':
+        if first_game_type == 'rockpaperscissors':
             if len(games_data) == 1:
                 # For a single game, use the detailed RPS analysis
                 analysis = game_analyzer.analyze_rps_game(games_data[0])

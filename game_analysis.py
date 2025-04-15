@@ -17,42 +17,6 @@ class GameAnalyzer:
             if self.api_key:
                 self.client = openai.OpenAI(api_key=self.api_key)
     
-    def analyze_tictactoe_game(self, game_data):
-        """Analyze a TicTacToe game and provide insights"""
-        if not self.api_key:
-            return "API key not set. Please configure your OpenAI API key."
-        
-        # Format the game data for analysis
-        formatted_game = self._format_tictactoe_game(game_data)
-        
-        # Construct the prompt
-        prompt = f"""
-        Analyze this Tic Tac Toe game:
-        
-        {formatted_game}
-        
-        Provide a brief analysis including:
-        1. Key turning points in the game
-        2. Any missed opportunities
-        3. Strategic strengths and weaknesses
-        4. Suggestions for improvement
-        """
-        
-        try:
-            # Call OpenAI API with new format
-            response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a Tic Tac Toe game analysis expert."},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=500,
-                temperature=0.7
-            )
-            return response.choices[0].message.content.strip()
-        except Exception as e:
-            return f"Analysis error: {str(e)}"
-    
     def analyze_rps_game(self, game_data):
         """Analyze a Rock Paper Scissors game and provide insights"""
         if not self.api_key:
@@ -87,22 +51,6 @@ class GameAnalyzer:
             return response.choices[0].message.content.strip()
         except Exception as e:
             return f"Analysis error: {str(e)}"
-    
-    def _format_tictactoe_game(self, game_data):
-        """Format TicTacToe game data into a readable string for analysis"""
-        player_symbol = game_data['player_symbol']
-        ai_symbol = game_data['ai_symbol']
-        
-        formatted_game = f"Player is {player_symbol}, AI is {ai_symbol}\n"
-        formatted_game += f"Outcome: {game_data['outcome'] or 'Unknown'}, Winner: {game_data['winner'] or 'None'}\n\n"
-        
-        for i, move in enumerate(game_data['moves'], 1):
-            player = "Player" if move['player'] == player_symbol else "AI"
-            board_str = '\n'.join([' '.join(row) for row in move['board_state']])
-            pos = move['position']
-            formatted_game += f"Move {i}: {player} placed {move['player']} at position {pos}\n{board_str}\n\n"
-        
-        return formatted_game
     
     def _format_rps_game(self, game_data):
         """Format Rock Paper Scissors game data into a readable string for analysis"""
