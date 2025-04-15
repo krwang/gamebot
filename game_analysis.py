@@ -68,8 +68,7 @@ class GameAnalyzer:
         {formatted_game}
         
         Provide a brief analysis including:
-        1. Patterns in player choices
-        2. Whether the player showed any predictable tendencies
+        1. Patterns in player choices. This should be deeper than just looking at the stats. Try to pick out any patterns given the full context of the game such as "the player consistently switched after losing a round" or "the player always stays with the same movewhen losing a round"
         3. How could the player improve their strategy
         4. Was there any psychological pattern evident in the choices?
         """
