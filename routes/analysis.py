@@ -17,7 +17,7 @@ def view_game_analysis(game_id):
     """Display the analysis of a single game in a formatted HTML page"""
     try:
         # Get the game data
-        game_data = storage.get_game(game_id)
+        game_data = storage.get_game_as_json(game_id)
         if not game_data:
             return render_template('error.html', error='Game not found'), 404
         
@@ -47,13 +47,15 @@ def view_game_analysis(game_id):
                              analysis=analysis)
     except Exception as e:
         print(f"Error in view_game_analysis: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return render_template('error.html', error=str(e)), 500
 
 @analysis_bp.route('/api/analyze-game/<game_id>', methods=['GET'])
 def analyze_game(game_id):
     try:
         # Get the game data
-        game_data = storage.get_game(game_id)
+        game_data = storage.get_game_as_json(game_id)
         if not game_data:
             return jsonify({'error': 'Game not found'}), 404
         
@@ -71,6 +73,8 @@ def analyze_game(game_id):
         return jsonify({'analysis': analysis})
     except Exception as e:
         print(f"Error in analyze_game: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @analysis_bp.route('/api/analyze-games', methods=['POST'])
