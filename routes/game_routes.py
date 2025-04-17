@@ -1,6 +1,8 @@
+import os
 from flask import Blueprint, request, jsonify, render_template, redirect, url_for
 from games.game_factory import GameFactory
 from game_history import GameHistory
+from games.rockpaperscissors.rps_model import load_trained_model
 
 game_routes = Blueprint('game_routes', __name__)
 
@@ -143,5 +145,27 @@ def end_game(game_id):
         return jsonify({
             'redirect_url': f'/analyze-game/{game_id}'
         })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@game_routes.route('/api/upload-model', methods=['POST'])
+def upload_model():
+    """Handle model file upload"""
+    if 'model' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+        
+    file = request.files['model']
+    if not file.filename.endswith('.pth'):
+        return jsonify({'error': 'Only .pth files are accepted'}), 400
+        
+    try:
+        # Create uploads directory if it doesn't exist
+        os.makedirs('uploads', exist_ok=True)
+        
+        # Save the file
+        file_path = os.path.join('uploads', 'custom_model.pth')
+        file.save(file_path)
+        
+        return jsonify({'message': 'Model uploaded successfully'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500 

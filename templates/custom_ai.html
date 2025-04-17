@@ -303,8 +303,10 @@
             <button class="choice-btn" onclick="makeMove('scissors')">✌️</button>
         </div>
 
-        <div id="result" class="result" style="cursor: pointer;" onclick="document.getElementById('modelFile').click()">
-            Upload an AI model to play against! 📁
+        <div id="result" class="result">
+            <label for="modelFile" style="cursor: pointer; display: block; width: 100%; height: 100%;">
+                Upload an AI model to play against! 📁
+            </label>
             <input type="file" id="modelFile" accept=".pth" style="display: none;">
         </div>
 
@@ -343,12 +345,60 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Wait for DOM to be fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, setting up file input listener');
+            const fileInput = document.getElementById('modelFile');
+            if (fileInput) {
+                fileInput.addEventListener('change', function(event) {
+                    console.log('File upload triggered!');
+                    const file = event.target.files[0];
+                    if (!file) {
+                        console.log('No file selected');
+                        return;
+                    }
+                    console.log('Selected file:', file.name);
+
+                    const formData = new FormData();
+                    formData.append('model', file);
+
+                    fetch('/api/upload-model', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => {
+                        console.log('Server response:', response);
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Response data:', data);
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+                        customModelUploaded = true;
+                        document.getElementById('result').innerHTML = `
+                            <div>Model uploaded successfully! ✅</div>
+                            <div>Choose one of the above 👆 to get started!</div>
+                        `;
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        document.getElementById('result').innerHTML = `Error: ${error.message}`;
+                    });
+                });
+                console.log('File input change listener attached');
+            } else {
+                console.error('Could not find file input element!');
+            }
+        });
+
         let gameId = null;
         let currentRound = 0;
         let playerWins = 0;
         let aiWins = 0;
         let draws = 0;
         let moveHistory = [];
+        let customModelUploaded = false;
 
         async function startGame() {
             console.log('Starting new game...');
@@ -358,7 +408,10 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ game_type: 'rockpaperscissors' })
+                    body: JSON.stringify({ 
+                        game_type: 'rockpaperscissors',
+                        use_custom_model: customModelUploaded
+                    })
                 });
                 const data = await response.json();
                 console.log('Game started with data:', data);
@@ -379,7 +432,8 @@
             try {
                 const requestBody = {
                     game_id: gameId,
-                    choice: playerChoice
+                    choice: playerChoice,
+                    use_custom_model: customModelUploaded
                 };
                 console.log('Sending move request:', requestBody);
                 const response = await fetch('/api/move', {
@@ -475,58 +529,6 @@
             document.getElementById('aiWins').textContent = aiWins;
             document.getElementById('draws').textContent = draws;
         }
-
-        function updateMoveHistory(data) {
-            const moveHistoryDiv = document.getElementById('moveHistory');
-            const moveItem = document.createElement('div');
-            moveItem.className = 'move-item';
-            
-            const timestamp = new Date().toLocaleTimeString();
-            moveItem.innerHTML = `
-                <span class="player">You: ${data.player_move}</span> vs 
-                <span class="ai">AI: ${data.ai_move}</span> - 
-                <span class="result">${data.result}</span>
-                <span class="timestamp">${timestamp}</span>
-            `;
-            
-            moveHistoryDiv.insertBefore(moveItem, moveHistoryDiv.firstChild);
-            moveHistory.unshift({
-                player: data.player_move,
-                ai: data.ai_move,
-                result: data.result,
-                timestamp: timestamp
-            });
-        }
-
-        function updateAnalysis(data) {
-            if (data.analysis) {
-                const analysisSection = document.getElementById('analysisSection');
-                analysisSection.style.display = 'block';
-                
-                const patternsDiv = document.getElementById('patterns');
-                patternsDiv.innerHTML = '';
-                
-                data.analysis.patterns.forEach(pattern => {
-                    const patternItem = document.createElement('div');
-                    patternItem.className = 'pattern-item';
-                    patternItem.innerHTML = `
-                        <h5>${pattern.name}</h5>
-                        <p>${pattern.description}</p>
-                        <p>Confidence: <span class="confidence">${pattern.confidence}%</span></p>
-                    `;
-                    patternsDiv.appendChild(patternItem);
-                });
-                
-                const suggestionsList = document.getElementById('suggestions');
-                suggestionsList.innerHTML = '';
-                
-                data.analysis.suggestions.forEach(suggestion => {
-                    const li = document.createElement('li');
-                    li.textContent = suggestion;
-                    suggestionsList.appendChild(li);
-                });
-            }
-        }
     </script>
 </body>
-</html> 
+</html>
