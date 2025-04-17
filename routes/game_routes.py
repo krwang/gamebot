@@ -9,6 +9,11 @@ def play_rps():
     """Render the Rock Paper Scissors game page"""
     return render_template('game.html')
 
+@game_routes.route('/custom-ai')
+def play_custom_ai():
+    """Render the Rock Paper Scissors game page"""
+    return render_template('custom_ai.html')
+
 @game_routes.route('/api/new-game', methods=['POST'])
 def new_game():
     """Create a new game"""
