@@ -2,7 +2,7 @@ import os
 from flask import Blueprint, request, jsonify, render_template, redirect, url_for
 from games.game_factory import GameFactory
 from game_history import GameHistory
-from games.rockpaperscissors.rps_model import load_trained_model
+from games.rockpaperscissors.rps_model import load_trained_model, load_model_from_path
 
 game_routes = Blueprint('game_routes', __name__)
 
@@ -53,6 +53,7 @@ def make_move():
     data = request.get_json()
     game_id = data.get('game_id')
     choice = data.get('choice')
+    use_custom_model = data.get('use_custom_model', False)
     
     if not game_id:
         return jsonify({'error': 'Game ID is required'}), 400
@@ -77,6 +78,28 @@ def make_move():
         game_state = game.resume_game_state(game_history, game_data)
         print(f"Game state: {game_state}")
         
+        # Load custom model if requested
+        if use_custom_model:
+            try:
+                print("\n=== ATTEMPTING TO LOAD CUSTOM MODEL ===")
+                model_path = os.path.join('uploads', 'custom_model.pth')
+                print(f"Looking for model at: {model_path}")
+                if os.path.exists(model_path):
+                    print("Model file found, loading...")
+                    custom_model = load_model_from_path(model_path)
+                    print(f"Model loaded successfully: {custom_model}")
+                    game_state['board']['custom_ai_model'] = custom_model
+                    print("Custom model added to game state")
+                else:
+                    print("No custom model file found")
+                print("=== END CUSTOM MODEL LOADING ===\n")
+            except Exception as e:
+                print(f"\n=== ERROR LOADING CUSTOM MODEL ===")
+                print(f"Error details: {e}")
+                print("Continuing with default AI")
+                print("=== END CUSTOM MODEL ERROR ===\n")
+                # Continue with default AI if model loading fails
+        
         # Make player move
         move_data = {'choice': choice}
         game_state, success = game.make_player_move(game_state, move_data)
@@ -84,24 +107,33 @@ def make_move():
         if not success:
             return jsonify({'error': 'Invalid move'}), 400
         
+        # Create a clean board state without the model for storage
+        clean_board = game_state['board'].copy()
+        if 'custom_ai_model' in clean_board:
+            del clean_board['custom_ai_model']
+        
         # Save the updated game state
         game_history.record_move(
             game_state['player_symbol'],
             None,
-            game_state['board'],
+            clean_board,
             move_data
         )
+        
+        # Create another clean board for the response
+        response_board = clean_board.copy()
         
         # Return the updated game state
         return jsonify({
             'board': {
-                'player_choice': game_state['board']['player_choice'],
-                'ai_choice': game_state['board']['ai_choice'],
-                'round': game_state['board']['round'],
-                'player_score': game_state['board']['player_score'],
-                'ai_score': game_state['board']['ai_score'],
-                'draws': game_state['board']['draws'],
-                'result': game_state['board']['result']
+                'player_choice': response_board['player_choice'],
+                'ai_choice': response_board['ai_choice'],
+                'round': response_board['round'],
+                'player_score': response_board['player_score'],
+                'ai_score': response_board['ai_score'],
+                'draws': response_board['draws'],
+                'result': response_board['result'],
+                'using_custom_model': bool(game_state['board'].get('custom_ai_model'))
             },
             'game_over': game_state['game_over'],
             'winner': game_state['winner'],

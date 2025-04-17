@@ -130,10 +130,15 @@ class RockPaperScissorsGame(Game):
         # Increment round before recording the move
         game_state['board']['round'] += 1
         
+        # Create a copy of the board state without the model for recording
+        board_state_for_storage = game_state['board'].copy()
+        if 'custom_ai_model' in board_state_for_storage:
+            del board_state_for_storage['custom_ai_model']
+        
         game_state['history'].record_move(
             game_state['player_symbol'],
             None,  # No position for RPS
-            game_state['board'],
+            board_state_for_storage,
             move_data
         )
         
@@ -143,8 +148,38 @@ class RockPaperScissorsGame(Game):
         """AI makes a choice using the custom model if available, otherwise random"""
         board = game_state['board']
         
-        # For now, just use random choice
+        # Try to use custom model if available
+        if board.get('custom_ai_model'):
+            try:
+                print("\n=== CUSTOM AI MODEL DETECTED ===")
+                print(f"Using custom model: {type(board['custom_ai_model'])}")
+                
+                # Get the game history for prediction
+                game_history = game_state['history']
+                game_data = game_history.get_game(game_history.current_game_id)
+                moves = game_data['moves'] if game_data and 'moves' in game_data else []
+                print(f"Game history length: {len(moves)}")
+                
+                # Use the model to predict next move
+                ai_choice = predict_next_move(board['custom_ai_model'], moves)
+                print(f"Custom model predicted move: {ai_choice}")
+                game_state['board']['ai_choice'] = ai_choice
+                print("=== END CUSTOM AI PREDICTION ===\n")
+                return
+            except Exception as e:
+                print(f"\n=== CUSTOM MODEL ERROR ===")
+                print(f"Error using custom model: {str(e)}")
+                print("Falling back to random choice")
+                print("=== END CUSTOM MODEL ERROR ===\n")
+                # Remove the model from the state to prevent future errors
+                board['custom_ai_model'] = None
+                # Fall back to random if model fails
+                
+        # Fallback to random choice
+        print("\n=== USING DEFAULT RANDOM AI ===")
         ai_choice = random.choice(self.CHOICES)
+        print(f"Random AI chose: {ai_choice}")
+        print("=== END RANDOM AI CHOICE ===\n")
         game_state['board']['ai_choice'] = ai_choice
     
     def _determine_round_result(self, game_state):
