@@ -5,6 +5,7 @@ from games.rockpaperscissors.rps_model import train_model, load_trained_model
 from game_history import GameHistory
 from werkzeug.utils import secure_filename
 import tempfile
+import boto3
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -17,6 +18,10 @@ game_history = GameHistory()
 UPLOAD_FOLDER = 'ai_models'
 ALLOWED_EXTENSIONS = {'pt'}
 
+# Configure S3
+S3_BUCKET = 'rps-ai'
+s3_client = boto3.client('s3')
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -28,6 +33,8 @@ def train_ai():
         logger.debug(f"Request data: {data}")
         
         game_id = data.get('game_id')
+        upload_to_s3 = data.get('upload_to_s3', False)
+        
         if not game_id:
             logger.error("No game_id provided in request")
             return jsonify({'error': 'Game ID is required'}), 400
@@ -54,10 +61,29 @@ def train_ai():
             return jsonify({'error': 'Failed to train model'}), 500
             
         logger.info(f"Model trained successfully, saved to: {model_path}")
-        # Return the model URL
-        model_url = f'/api/download-model/{os.path.basename(model_path)}'
-        logger.info(f"Returning model URL: {model_url}")
-        return jsonify({'model_url': model_url})
+        
+        if upload_to_s3:
+            try:
+                # Upload to S3
+                s3_key = f"models/rps_model_{game_id}.pth"
+                s3_client.upload_file(model_path, S3_BUCKET, s3_key)
+                logger.info(f"Model uploaded to S3: {s3_key}")
+                
+                # Clean up local file
+                os.remove(model_path)
+                
+                return jsonify({
+                    'message': 'Model trained and uploaded to S3 successfully',
+                    's3_key': s3_key
+                })
+            except Exception as e:
+                logger.error(f"Failed to upload model to S3: {str(e)}")
+                return jsonify({'error': f'Failed to upload model to S3: {str(e)}'}), 500
+        else:
+            # Return the model URL for download
+            model_url = f'/api/download-model/{os.path.basename(model_path)}'
+            logger.info(f"Returning model URL: {model_url}")
+            return jsonify({'model_url': model_url})
         
     except Exception as e:
         logger.exception("Unexpected error in train_ai route")

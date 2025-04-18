@@ -299,23 +299,26 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ game_id: gameId })
+                    body: JSON.stringify({ 
+                        game_id: gameId,
+                        upload_to_s3: true  // Add flag to indicate S3 upload
+                    })
                 });
                 
                 const data = await response.json();
                 
                 if (response.ok) {
-                    showToast('AI model trained successfully! Downloading...', 'success');
-                    // Download the model
-                    window.location.href = data.model_url;
+                    showToast('AI model trained and uploaded to S3 successfully!', 'success');
+                    // Update button text to indicate model is available
+                    trainButton.textContent = 'Model Uploaded to S3';
+                    trainButton.disabled = true;
                 } else {
-                    showToast(data.error || 'Failed to train AI model', 'danger');
+                    showToast(data.error || 'Failed to train and upload AI model', 'danger');
                 }
             } catch (error) {
-                showToast('An error occurred while training the AI model', 'danger');
+                showToast('An error occurred while training and uploading the AI model', 'danger');
                 console.error('Error:', error);
             } finally {
-                trainButton.disabled = false;
                 trainButton.classList.remove('loading');
             }
         }
