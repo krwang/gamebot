@@ -165,6 +165,15 @@
             background-color: rgba(73, 80, 87, 0.15);
             color: #495057;
         }
+        .model-name {
+            font-size: 1.4em;
+            font-weight: 700;
+            color: #2c3e50;
+            text-align: center;
+            margin: 0 auto 15px;
+            width: fit-content;
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -218,6 +227,7 @@
             <div class="round-display" id="roundDisplay">Round 1 of 10</div>
             <div class="row">
                 <div class="col-md-5">
+                    <div class="model-name" id="model1Name"></div>
                     <div class="choice-display" id="model1Choice">✊</div>
                     <div class="score-display" id="model1Score">Score: 0</div>
                 </div>
@@ -226,6 +236,7 @@
                     <div class="score-display" id="tieScore">Ties: 0</div>
                 </div>
                 <div class="col-md-5">
+                    <div class="model-name" id="model2Name"></div>
                     <div class="choice-display" id="model2Choice">✊</div>
                     <div class="score-display" id="model2Score">Score: 0</div>
                 </div>
@@ -295,6 +306,10 @@
             // Show battle area
             const battleArea = document.getElementById('battleArea');
             battleArea.style.display = 'block';
+            
+            // Set model names
+            document.getElementById('model1Name').textContent = model1;
+            document.getElementById('model2Name').textContent = model2;
             
             // Reset scores and display
             document.getElementById('model1Score').textContent = 'Score: 0';
