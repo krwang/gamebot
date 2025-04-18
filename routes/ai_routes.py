@@ -34,10 +34,15 @@ def train_ai():
         
         game_id = data.get('game_id')
         upload_to_s3 = data.get('upload_to_s3', False)
+        model_name = data.get('model_name')
         
         if not game_id:
             logger.error("No game_id provided in request")
             return jsonify({'error': 'Game ID is required'}), 400
+            
+        if not model_name:
+            logger.error("No model_name provided in request")
+            return jsonify({'error': 'Model name is required'}), 400
             
         logger.info(f"Attempting to get game data for game_id: {game_id}")
         # Get the game data
@@ -64,8 +69,8 @@ def train_ai():
         
         if upload_to_s3:
             try:
-                # Upload to S3
-                s3_key = f"models/rps_model_{game_id}.pth"
+                # Upload to S3 with custom model name
+                s3_key = f"models/{model_name}.pth"
                 s3_client.upload_file(model_path, S3_BUCKET, s3_key)
                 logger.info(f"Model uploaded to S3: {s3_key}")
                 

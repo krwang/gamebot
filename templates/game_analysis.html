@@ -254,14 +254,97 @@
 
         <div class="cta-buttons">
             <a href="/rps" class="cta-button play-again">Play Again</a>
-            <button class="cta-button train-ai" onclick="trainAI('{{ game.id }}')">Train AI to Play Like Me in This Game</button>
+            <button class="cta-button train-ai" onclick="showModelNameModal('{{ game.id }}')">Train AI to Play Like Me in This Game</button>
             <a href="/game-history" class="cta-button game-history">Game History</a>
+        </div>
+    </div>
+
+    <!-- Model Name Modal -->
+    <div class="modal fade" id="modelNameModal" tabindex="-1" aria-labelledby="modelNameModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modelNameModalLabel">Name Your AI Model</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="modelName" class="form-label">Enter a name for your AI model</label>
+                        <input type="text" class="form-control" id="modelName" placeholder="e.g., MyRPSMaster">
+                        <div class="form-text">This name will be used to identify your model in S3.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="trainAI()">Train & Upload</button>
+                </div>
+            </div>
         </div>
     </div>
 
     <div class="toast-container"></div>
 
     <script>
+        let currentGameId = null;
+
+        function showModelNameModal(gameId) {
+            currentGameId = gameId;
+            const modal = new bootstrap.Modal(document.getElementById('modelNameModal'));
+            modal.show();
+        }
+
+        async function trainAI() {
+            const modelNameInput = document.getElementById('modelName');
+            const modelName = modelNameInput.value.trim();
+            
+            if (!modelName) {
+                showToast('Please enter a name for your AI model', 'warning');
+                return;
+            }
+            
+            const trainButton = document.querySelector('.train-ai');
+            trainButton.disabled = true;
+            trainButton.classList.add('loading');
+            
+            // Close the modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modelNameModal'));
+            modal.hide();
+            
+            try {
+                const response = await fetch('/api/train-ai', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        game_id: currentGameId,
+                        upload_to_s3: true,
+                        model_name: modelName
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showToast('AI model trained and uploaded to S3 successfully!', 'success');
+                    // Update button text to indicate model is available
+                    trainButton.textContent = 'Model Uploaded to S3';
+                    trainButton.disabled = true;
+                } else {
+                    showToast(data.error || 'Failed to train and upload AI model', 'danger');
+                    trainButton.disabled = false;
+                }
+            } catch (error) {
+                showToast('An error occurred while training and uploading the AI model', 'danger');
+                console.error('Error:', error);
+                trainButton.disabled = false;
+            } finally {
+                trainButton.classList.remove('loading');
+                // Clear the input for next time
+                modelNameInput.value = '';
+            }
+        }
+
         function showToast(message, type = 'success') {
             const toastContainer = document.querySelector('.toast-container');
             const toast = document.createElement('div');
@@ -286,41 +369,6 @@
             toast.addEventListener('hidden.bs.toast', () => {
                 toast.remove();
             });
-        }
-
-        async function trainAI(gameId) {
-            const trainButton = document.querySelector('.train-ai');
-            trainButton.disabled = true;
-            trainButton.classList.add('loading');
-            
-            try {
-                const response = await fetch('/api/train-ai', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ 
-                        game_id: gameId,
-                        upload_to_s3: true  // Add flag to indicate S3 upload
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    showToast('AI model trained and uploaded to S3 successfully!', 'success');
-                    // Update button text to indicate model is available
-                    trainButton.textContent = 'Model Uploaded to S3';
-                    trainButton.disabled = true;
-                } else {
-                    showToast(data.error || 'Failed to train and upload AI model', 'danger');
-                }
-            } catch (error) {
-                showToast('An error occurred while training and uploading the AI model', 'danger');
-                console.error('Error:', error);
-            } finally {
-                trainButton.classList.remove('loading');
-            }
         }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
