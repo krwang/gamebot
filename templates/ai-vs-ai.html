@@ -65,6 +65,66 @@
             color: #34495e;
             margin-bottom: 0.5rem;
         }
+        .model-selection {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        .model-selection h3 {
+            color: #2c3e50;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        .model-select {
+            margin-bottom: 1rem;
+        }
+        .start-battle-btn {
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 1rem;
+        }
+        .start-battle-btn:hover {
+            background-color: #1557b0;
+            transform: translateY(-2px);
+        }
+        .battle-area {
+            display: none;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .battle-area h3 {
+            color: #2c3e50;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        .choice-display {
+            font-size: 3rem;
+            text-align: center;
+            margin: 1rem 0;
+        }
+        .vs-text {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2c3e50;
+            text-align: center;
+            margin: 1rem 0;
+        }
+        .score-display {
+            font-size: 1.5rem;
+            text-align: center;
+            margin: 1rem 0;
+            color: #2c3e50;
+        }
     </style>
 </head>
 <body>
@@ -85,8 +145,110 @@
             <h1>AI vs. AI Battle</h1>
             <p>Watch two AI models compete against each other in Rock-Paper-Scissors!</p>
         </div>
+
+        <div class="model-selection">
+            <h3>Select AI Models</h3>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="model-select">
+                        <label for="model1" class="form-label">AI Model 1</label>
+                        <select class="form-select" id="model1">
+                            <option value="">Loading models...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="model-select">
+                        <label for="model2" class="form-label">AI Model 2</label>
+                        <select class="form-select" id="model2">
+                            <option value="">Loading models...</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <button class="start-battle-btn" onclick="startBattle()">Start Battle</button>
+        </div>
+
+        <div class="battle-area" id="battleArea">
+            <h3>Battle in Progress</h3>
+            <div class="row">
+                <div class="col-md-5">
+                    <div class="choice-display" id="model1Choice">✊</div>
+                    <div class="score-display" id="model1Score">Score: 0</div>
+                </div>
+                <div class="col-md-2">
+                    <div class="vs-text">VS</div>
+                </div>
+                <div class="col-md-5">
+                    <div class="choice-display" id="model2Choice">✊</div>
+                    <div class="score-display" id="model2Score">Score: 0</div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Load available models when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/api/list-models')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        console.error('Error loading models:', data.error);
+                        return;
+                    }
+                    
+                    const model1Select = document.getElementById('model1');
+                    const model2Select = document.getElementById('model2');
+                    
+                    // Clear loading message
+                    model1Select.innerHTML = '<option value="">Select a model</option>';
+                    model2Select.innerHTML = '<option value="">Select a model</option>';
+                    
+                    // Add models to both dropdowns
+                    data.models.forEach(model => {
+                        const option1 = document.createElement('option');
+                        option1.value = model;
+                        option1.textContent = model;
+                        
+                        const option2 = document.createElement('option');
+                        option2.value = model;
+                        option2.textContent = model;
+                        
+                        model1Select.appendChild(option1);
+                        model2Select.appendChild(option2);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        });
+
+        function startBattle() {
+            const model1 = document.getElementById('model1').value;
+            const model2 = document.getElementById('model2').value;
+            
+            if (!model1 || !model2) {
+                alert('Please select both models to start the battle!');
+                return;
+            }
+            
+            if (model1 === model2) {
+                alert('Please select two different models!');
+                return;
+            }
+            
+            // Show battle area
+            document.getElementById('battleArea').style.display = 'block';
+            
+            // TODO: Implement the battle logic
+            // This will involve:
+            // 1. Loading both models
+            // 2. Setting up a game between them
+            // 3. Making moves automatically
+            // 4. Updating the display
+        }
+    </script>
 </body>
 </html> 

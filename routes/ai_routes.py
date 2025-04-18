@@ -169,4 +169,28 @@ def load_model():
     except Exception as e:
         logger.exception("Unexpected error in load_model route")
         return jsonify({'error': str(e)}), 500
+
+@ai_bp.route('/api/list-models', methods=['GET'])
+def list_models():
+    """List all available models in the S3 bucket"""
+    try:
+        # List objects in the models directory
+        response = s3_client.list_objects_v2(
+            Bucket=S3_BUCKET,
+            Prefix='models/'
+        )
+        
+        # Extract model names from the S3 keys
+        models = []
+        if 'Contents' in response:
+            for obj in response['Contents']:
+                if obj['Key'].endswith('.pth'):
+                    # Remove 'models/' prefix and '.pth' suffix
+                    model_name = obj['Key'][7:-4]
+                    models.append(model_name)
+        
+        return jsonify({'models': models})
+    except Exception as e:
+        logger.error(f"Failed to list models from S3: {str(e)}")
+        return jsonify({'error': str(e)}), 500
  
