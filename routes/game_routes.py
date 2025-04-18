@@ -16,6 +16,11 @@ def play_custom_ai():
     """Render the Rock Paper Scissors game page"""
     return render_template('custom_ai.html')
 
+@game_routes.route('/ai-vs-ai')
+def play_ai_vs_ai():
+    """Render the AI vs. AI battle page"""
+    return render_template('ai-vs-ai.html')
+
 @game_routes.route('/api/new-game', methods=['POST'])
 def new_game():
     """Create a new game"""
