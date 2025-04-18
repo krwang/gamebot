@@ -121,6 +121,10 @@
             font-size: 3rem;
             text-align: center;
             margin: 1rem 0;
+            transition: transform 0.3s ease;
+        }
+        .choice-display.active {
+            transform: scale(1.2);
         }
         .vs-text {
             font-size: 2rem;
@@ -134,6 +138,32 @@
             text-align: center;
             margin: 1rem 0;
             color: #2c3e50;
+        }
+        .round-display {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 1rem;
+        }
+        .battle-result {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 4px;
+            display: none;
+        }
+        .battle-result.win {
+            background-color: rgba(30, 126, 52, 0.15);
+            color: #1e7e34;
+        }
+        .battle-result.lose {
+            background-color: rgba(200, 35, 51, 0.15);
+            color: #c82333;
+        }
+        .battle-result.tie {
+            background-color: rgba(73, 80, 87, 0.15);
+            color: #495057;
         }
     </style>
 </head>
@@ -185,6 +215,7 @@
 
         <div class="battle-area" id="battleArea">
             <h3>Battle in Progress</h3>
+            <div class="round-display" id="roundDisplay">Round 1 of 10</div>
             <div class="row">
                 <div class="col-md-5">
                     <div class="choice-display" id="model1Choice">✊</div>
@@ -192,12 +223,14 @@
                 </div>
                 <div class="col-md-2">
                     <div class="vs-text">VS</div>
+                    <div class="score-display" id="tieScore">Ties: 0</div>
                 </div>
                 <div class="col-md-5">
                     <div class="choice-display" id="model2Choice">✊</div>
                     <div class="score-display" id="model2Score">Score: 0</div>
                 </div>
             </div>
+            <div class="battle-result" id="battleResult"></div>
         </div>
     </div>
 
@@ -260,15 +293,131 @@
             }
             
             // Show battle area
-            document.getElementById('battleArea').style.display = 'block';
+            const battleArea = document.getElementById('battleArea');
+            battleArea.style.display = 'block';
             
-            // TODO: Implement the battle logic
-            // This will involve:
-            // 1. Loading both models
-            // 2. Setting up a game between them
-            // 3. Making moves automatically for the specified number of rounds
-            // 4. Updating the display
+            // Reset scores and display
+            document.getElementById('model1Score').textContent = 'Score: 0';
+            document.getElementById('model2Score').textContent = 'Score: 0';
+            document.getElementById('tieScore').textContent = 'Ties: 0';
+            document.getElementById('roundDisplay').textContent = `Round 1 of ${rounds}`;
+            document.getElementById('battleResult').style.display = 'none';
+            
+            // Disable the start button
+            const startButton = document.querySelector('.start-battle-btn');
+            startButton.disabled = true;
+            startButton.textContent = 'Battle in Progress...';
+            
+            console.log('Starting battle between', model1, 'and', model2, 'for', rounds, 'rounds');
+            
+            // Start the battle
+            fetch('/api/ai-battle', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model1: model1,
+                    model2: model2,
+                    rounds: rounds
+                })
+            })
+            .then(response => {
+                console.log('Received response, setting up stream reader');
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                
+                function processStream({ done, value }) {
+                    if (done) {
+                        console.log('Stream complete');
+                        // Re-enable the start button
+                        startButton.disabled = false;
+                        startButton.textContent = 'Start Battle';
+                        return;
+                    }
+                    
+                    const text = decoder.decode(value);
+                    console.log('Received chunk:', text);
+                    const lines = text.split('\n').filter(line => line.trim());
+                    
+                    lines.forEach(line => {
+                        console.log('Processing line:', line);
+                        const data = JSON.parse(line);
+                        console.log('Parsed data:', data);
+                        
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+                        
+                        if (data.final) {
+                            console.log('Received final result');
+                            // Show final result
+                            const resultDiv = document.getElementById('battleResult');
+                            resultDiv.style.display = 'block';
+                            
+                            if (data.model1_score > data.model2_score) {
+                                resultDiv.className = 'battle-result win';
+                                resultDiv.textContent = `${model1} wins!`;
+                            } else if (data.model2_score > data.model1_score) {
+                                resultDiv.className = 'battle-result lose';
+                                resultDiv.textContent = `${model2} wins!`;
+                            } else {
+                                resultDiv.className = 'battle-result tie';
+                                resultDiv.textContent = "It's a tie!";
+                            }
+                        } else {
+                            console.log('Processing round:', data.round);
+                            // Update round display
+                            document.getElementById('roundDisplay').textContent = `Round ${data.round} of ${rounds}`;
+                            
+                            // Update scores
+                            document.getElementById('model1Score').textContent = `Score: ${data.model1_score}`;
+                            document.getElementById('model2Score').textContent = `Score: ${data.model2_score}`;
+                            document.getElementById('tieScore').textContent = `Ties: ${data.draws}`;
+                            
+                            // Update choices
+                            const model1Choice = document.getElementById('model1Choice');
+                            const model2Choice = document.getElementById('model2Choice');
+                            
+                            // Add a delay before showing the choices
+                            setTimeout(() => {
+                                model1Choice.textContent = getEmoji(data.model1_choice);
+                                model2Choice.textContent = getEmoji(data.model2_choice);
+                                
+                                // Add animation
+                                model1Choice.classList.add('active');
+                                model2Choice.classList.add('active');
+                                
+                                setTimeout(() => {
+                                    model1Choice.classList.remove('active');
+                                    model2Choice.classList.remove('active');
+                                }, 500);
+                            }, 500);
+                        }
+                    });
+                    
+                    return reader.read().then(processStream);
+                }
+                
+                return reader.read().then(processStream);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred during the battle: ' + error.message);
+                // Re-enable the start button in case of error
+                startButton.disabled = false;
+                startButton.textContent = 'Start Battle';
+            });
+        }
+
+        function getEmoji(choice) {
+            switch (choice) {
+                case 'rock': return '✊';
+                case 'paper': return '✋';
+                case 'scissors': return '✌️';
+                default: return '❓';
+            }
         }
     </script>
 </body>
-</html> 
+</html>

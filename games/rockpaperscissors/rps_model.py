@@ -7,6 +7,7 @@ from game_storage import GameStorage
 import tempfile
 import os
 import logging
+import random
 
 # Configure logging\logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -182,6 +183,8 @@ def predict_next_move(model, game_history, window_size=5):
     pad_choice = 3
     pad_result = 3
 
+    logger.info(f"Predicting next move with history length: {len(game_history)}")
+    
     mv = []
     for m in game_history:
         pm = m['move_data'].get('player_choice') or m['move_data'].get('choice')
@@ -197,17 +200,28 @@ def predict_next_move(model, game_history, window_size=5):
             ])
 
     if len(mv) == 0:
-        return 'rock'
+        logger.info("No history, returning random choice")
+        return random.choice(['rock', 'paper', 'scissors'])
 
     last = mv[-window_size:]
     if len(last) < window_size:
         pad = [pad_choice, pad_choice, pad_result, 0, 0]
         last = [pad] * (window_size - len(last)) + last
 
+    logger.info(f"Last {window_size} moves: {last}")
+    
     tensor = torch.tensor([last], dtype=torch.long)
     with torch.no_grad():
         logits = model(tensor)
-        pred = logits.argmax(dim=-1).item()
+        logger.info(f"Raw logits: {logits}")
+        
+        # Convert logits to probabilities using softmax
+        probs = torch.softmax(logits, dim=-1)
+        logger.info(f"Probabilities: {probs}")
+        
+        # Sample from the probability distribution
+        pred = torch.multinomial(probs, 1).item()
+        logger.info(f"Sampled prediction: {pred} ({idx_to_choice[pred]})")
 
     return idx_to_choice[pred]
 
