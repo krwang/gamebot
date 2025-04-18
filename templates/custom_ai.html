@@ -347,6 +347,33 @@
     <script>
         // Wait for DOM to be fully loaded
         document.addEventListener('DOMContentLoaded', function() {
+            // Check for model parameter in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const modelName = urlParams.get('model');
+            
+            if (modelName) {
+                console.log('Loading model from URL parameter:', modelName);
+                // Fetch the model from S3
+                fetch(`/api/load-model?model=${encodeURIComponent(modelName)}`, {
+                    method: 'GET'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+                    customModelUploaded = true;
+                    document.getElementById('result').innerHTML = `
+                        <div>Model "${modelName}" loaded successfully! ✅</div>
+                        <div>Choose one of the above 👆 to get started!</div>
+                    `;
+                })
+                .catch(error => {
+                    console.error('Error loading model:', error);
+                    document.getElementById('result').innerHTML = `Error loading model: ${error.message}`;
+                });
+            }
+
             console.log('DOM loaded, setting up file input listener');
             const fileInput = document.getElementById('modelFile');
             if (fileInput) {

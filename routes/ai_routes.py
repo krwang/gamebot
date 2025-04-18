@@ -142,4 +142,31 @@ def download_model(filename):
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@ai_bp.route('/api/load-model', methods=['GET'])
+def load_model():
+    try:
+        model_name = request.args.get('model')
+        if not model_name:
+            return jsonify({'error': 'Model name is required'}), 400
+
+        # Construct the S3 key
+        s3_key = f"models/{model_name}.pth"
+        
+        try:
+            # Download the model from S3
+            local_path = os.path.join(tempfile.gettempdir(), f"{model_name}.pth")
+            s3_client.download_file(S3_BUCKET, s3_key, local_path)
+            
+            return jsonify({
+                'message': 'Model loaded successfully',
+                'model_path': local_path
+            })
+        except Exception as e:
+            logger.error(f"Failed to load model from S3: {str(e)}")
+            return jsonify({'error': f'Failed to load model from S3: {str(e)}'}), 500
+            
+    except Exception as e:
+        logger.exception("Unexpected error in load_model route")
+        return jsonify({'error': str(e)}), 500
  

@@ -327,9 +327,8 @@
                 
                 if (response.ok) {
                     showToast('AI model trained and uploaded to S3 successfully!', 'success');
-                    // Update button text to indicate model is available
-                    trainButton.textContent = 'Model Uploaded to S3';
-                    trainButton.disabled = true;
+                    // Redirect to custom_ai.html with the model name
+                    window.location.href = `/custom-ai?model=${encodeURIComponent(modelName)}`;
                 } else {
                     showToast(data.error || 'Failed to train and upload AI model', 'danger');
                     trainButton.disabled = false;
