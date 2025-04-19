@@ -1,3 +1,4 @@
+# Main Flask application for RPS AI Game
 from flask import Flask, render_template, redirect, url_for
 from dotenv import load_dotenv
 import os
