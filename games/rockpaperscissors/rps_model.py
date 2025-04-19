@@ -124,6 +124,32 @@ def train_and_save_model(game_data, window_size=5, epochs=30, batch_size=8, lr=5
         logger.error("No valid training data found")
         return None
 
+    # Get number of rounds from game data
+    num_rounds = len(game_data.get('moves', []))
+    logger.info(f"Training model with {num_rounds} rounds of data")
+
+    # Adjust parameters based on number of rounds
+    if num_rounds < 20:
+        # Small dataset adjustments
+        window_size = min(3, window_size)  # Smaller window for less data
+        epochs = 20  # Fewer epochs to prevent overfitting
+        batch_size = min(4, batch_size)  # Smaller batch size
+        lr = 1e-3  # Higher learning rate
+    elif num_rounds < 50:
+        # Medium dataset adjustments
+        window_size = min(4, window_size)
+        epochs = 25
+        batch_size = min(6, batch_size)
+        lr = 5e-4
+    else:
+        # Large dataset - use default or larger parameters
+        window_size = min(5, window_size)
+        epochs = 30
+        batch_size = min(8, batch_size)
+        lr = 5e-4
+
+    logger.info(f"Adjusted parameters - window_size: {window_size}, epochs: {epochs}, batch_size: {batch_size}, lr: {lr}")
+
     device = get_device()
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     model = RPSModel().to(device)
