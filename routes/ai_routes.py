@@ -29,6 +29,63 @@ s3_client = boto3.client('s3')
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+@ai_bp.route('/api/custom-ai', methods=['POST'])
+def custom_ai():
+    try:
+        data = request.get_json()
+        model_name = data.get('model')
+        player_choice = data.get('choice')
+        
+        if not model_name or not player_choice:
+            return jsonify({'error': 'Model name and player choice are required'}), 400
+            
+        logger.info(f"Custom AI: Loading model {model_name} for move against player choice {player_choice}")
+            
+        # Load the model
+        model_path = os.path.join(tempfile.gettempdir(), f"{model_name}.pth")
+        if not os.path.exists(model_path):
+            logger.info(f"Downloading model {model_name} from S3")
+            s3_client.download_file(S3_BUCKET, f"models/{model_name}.pth", model_path)
+            
+        model = load_model_from_path(model_path)
+        
+        # Get game history
+        game_history = GameHistory()
+        history = game_history.get_current_game_history()
+        logger.info(f"Current game history length: {len(history)}")
+        
+        # Get AI move using non-deterministic prediction
+        ai_choice = predict_next_move(model, history, deterministic=False)
+        logger.info(f"Model {model_name} chose {ai_choice}")
+        
+        # Determine winner
+        if player_choice == ai_choice:
+            result = 'tie'
+        elif (player_choice == 'rock' and ai_choice == 'scissors') or \
+             (player_choice == 'paper' and ai_choice == 'rock') or \
+             (player_choice == 'scissors' and ai_choice == 'paper'):
+            result = 'player_win'
+        else:
+            result = 'ai_win'
+            
+        logger.info(f"Round result: {result}")
+            
+        # Update game history
+        game_history.record_move({
+            'player_choice': player_choice,
+            'ai_choice': ai_choice,
+            'result': result
+        })
+        
+        return jsonify({
+            'ai_choice': ai_choice,
+            'result': result
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in custom AI: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @ai_bp.route('/api/train-ai', methods=['POST'])
 def train_ai():
     try:
@@ -300,11 +357,17 @@ def ai_battle():
                 
                 # Get moves from both models using their respective histories
                 logger.info("Getting move from model 1")
-                model1_choice = predict_next_move(model1, model1_history)
+                model1_choice, model1_confidence = predict_next_move(model1, model1_history, deterministic=False, return_confidence=True)
                 logger.info("Getting move from model 2")
-                model2_choice = predict_next_move(model2, model2_history)
+                model2_choice, model2_confidence = predict_next_move(model2, model2_history, deterministic=False, return_confidence=True)
                 
-                logger.info(f"Model 1 chose {model1_choice}, Model 2 chose {model2_choice}")
+                # Add randomness based on confidence
+                if random.random() < 0.2 and model1_confidence < 0.8:
+                    model1_choice = random.choice(['rock', 'paper', 'scissors'])
+                if random.random() < 0.2 and model2_confidence < 0.8:
+                    model2_choice = random.choice(['rock', 'paper', 'scissors'])
+                
+                logger.info(f"Model 1 chose {model1_choice} (confidence: {model1_confidence:.2f}), Model 2 chose {model2_choice} (confidence: {model2_confidence:.2f})")
                 
                 # Update game state
                 game_state['board']['player_choice'] = model1_choice

@@ -176,7 +176,7 @@ def train_and_load_for_game(game_id, window_size=5):
     return model, None
 
 
-def predict_next_move(model, game_history, window_size=5, deterministic=True):
+def predict_next_move(model, game_history, window_size=5, deterministic=True, return_confidence=False):
     choice_to_idx = {'rock': 0, 'paper': 1, 'scissors': 2}
     result_to_idx = {'player_win': 0, 'ai_win': 1, 'tie': 2}
     idx_to_choice = {0: 'rock', 1: 'paper', 2: 'scissors'}
@@ -214,6 +214,9 @@ def predict_next_move(model, game_history, window_size=5, deterministic=True):
             probs = torch.softmax(logits, dim=-1)
             logger.info(f"Probabilities with no history: {probs}")
             
+            # Get the confidence (highest probability)
+            confidence = torch.max(probs).item()
+            
             # Choose move based on deterministic parameter
             if deterministic:
                 # Always choose the highest probability move
@@ -224,6 +227,8 @@ def predict_next_move(model, game_history, window_size=5, deterministic=True):
                 pred = torch.multinomial(probs, 1).item()
                 logger.info(f"Sampled prediction with no history: {pred} ({idx_to_choice[pred]})")
             
+            if return_confidence:
+                return idx_to_choice[pred], confidence
             return idx_to_choice[pred]
 
     last = mv[-window_size:]
@@ -242,6 +247,9 @@ def predict_next_move(model, game_history, window_size=5, deterministic=True):
         probs = torch.softmax(logits, dim=-1)
         logger.info(f"Probabilities: {probs}")
         
+        # Get the confidence (highest probability)
+        confidence = torch.max(probs).item()
+        
         # Choose move based on deterministic parameter
         if deterministic:
             # Always choose the highest probability move
@@ -252,6 +260,8 @@ def predict_next_move(model, game_history, window_size=5, deterministic=True):
             pred = torch.multinomial(probs, 1).item()
             logger.info(f"Sampled prediction: {pred} ({idx_to_choice[pred]})")
 
+    if return_confidence:
+        return idx_to_choice[pred], confidence
     return idx_to_choice[pred]
 
 # Backward-compatible aliases
