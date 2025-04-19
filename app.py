@@ -9,6 +9,10 @@ from routes.games import games_bp
 from routes.analysis import analysis_bp
 from routes.game_routes import game_routes
 from routes.ai_routes import ai_bp
+from routes.stats import stats_bp
+
+# Import middleware
+from middleware import track_visitor
 
 # Load environment variables from .env file
 load_dotenv()
@@ -22,6 +26,10 @@ app.register_blueprint(games_bp)
 app.register_blueprint(analysis_bp)
 app.register_blueprint(game_routes)
 app.register_blueprint(ai_bp)
+app.register_blueprint(stats_bp)
+
+# Add visitor tracking middleware
+app = track_visitor(app)
 
 # Create AI models directory if it doesn't exist
 os.makedirs('ai_models', exist_ok=True)
