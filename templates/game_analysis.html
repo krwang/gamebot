@@ -47,7 +47,7 @@
             color: #1a73e8;
         }
         .game-container {
-            max-width: 600px;
+            max-width: 800px;
             margin: 0 auto;
             padding: 20px;
             margin-top: 80px; /* Add margin to account for fixed navbar */
@@ -85,7 +85,7 @@
         }
         .details-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: 1fr 1fr;
             gap: 15px;
         }
         .detail-item {
@@ -93,7 +93,6 @@
             padding: 15px;
             border-radius: 8px;
             transition: all 0.3s ease;
-            /* border-left: 3px solid #1a73e8; */
         }
         .detail-item:hover {
             transform: translateY(-2px);
@@ -222,6 +221,59 @@
             right: 20px;
             z-index: 1000;
         }
+        .move-distribution {
+            margin-top: 10px;
+        }
+        .distribution-row {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .distribution-row.horizontal {
+            flex-direction: row;
+            justify-content: space-around;
+            align-items: center;
+        }
+        .move-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        .move-emoji {
+            font-size: 1.2rem;
+            min-width: 24px;
+        }
+        .move-count {
+            font-weight: 600;
+            color: #202124;
+        }
+        .move-percentage {
+            color: #5f6368;
+        }
+        .results-distribution {
+            margin-top: 10px;
+        }
+        .result-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        .result-label {
+            min-width: 60px;
+            color: #5f6368;
+        }
+        .result-count {
+            font-weight: 600;
+            color: #202124;
+        }
+        .result-percentage {
+            color: #5f6368;
+        }
+        .detail-item.full-width {
+            grid-column: 1 / -1;
+        }
     </style>
 </head>
 <body>
@@ -238,27 +290,77 @@
 
     <div class="game-container">
         <div class="game-details">
-            <h2>Game Details</h2>
+            <h2>Game Statistics</h2>
             <div class="details-grid">
                 <div class="detail-item">
-                    <h3>Game ID</h3>
-                    <p>#{{ game.id }}</p>
+                    <h3>Total Rounds</h3>
+                    <p>
+                        {% if game.moves %}
+                            {{ game.moves[-1].board_state.round - 1 }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </p>
                 </div>
+
                 <div class="detail-item">
-                    <h3>Start Time</h3>
-                    <p>{{ game.start_time }}</p>
+                    <h3>Game Results</h3>
+                    <div class="results-distribution">
+                        {% set total_rounds = game.moves[-1].board_state.round - 1 if game.moves else 0 %}
+                        {% set wins = game.player_score %}
+                        {% set losses = game.ai_score %}
+                        {% set draws = game.draws %}
+                        
+                        <div class="distribution-row">
+                            <div class="result-item">
+                                <span class="result-label">Wins:</span>
+                                <span class="result-count">{{ wins }}</span>
+                                <span class="result-percentage">({{ ((wins / total_rounds) * 100)|round(1) }}%)</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Losses:</span>
+                                <span class="result-count">{{ losses }}</span>
+                                <span class="result-percentage">({{ ((losses / total_rounds) * 100)|round(1) }}%)</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Draws:</span>
+                                <span class="result-count">{{ draws }}</span>
+                                <span class="result-percentage">({{ ((draws / total_rounds) * 100)|round(1) }}%)</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="detail-item">
-                    <h3>End Time</h3>
-                    <p>{{ game.end_time }}</p>
-                </div>
-                <div class="detail-item">
-                    <h3>Winner</h3>
-                    <p>{{ game.winner }}</p>
+
+                <div class="detail-item full-width">
+                    <h3>Move Distribution</h3>
+                    <div class="move-distribution">
+                        {% set total_rounds = game.moves[-1].board_state.round - 1 if game.moves else 0 %}
+                        {% set rock_count = game.moves|selectattr('move_data.player_choice', 'eq', 'rock')|list|length %}
+                        {% set paper_count = game.moves|selectattr('move_data.player_choice', 'eq', 'paper')|list|length %}
+                        {% set scissors_count = game.moves|selectattr('move_data.player_choice', 'eq', 'scissors')|list|length %}
+                        
+                        <div class="distribution-row horizontal">
+                            <div class="move-item">
+                                <span class="move-emoji">✊</span>
+                                <span class="move-count">{{ rock_count }}</span>
+                                <span class="move-percentage">({{ ((rock_count / total_rounds) * 100)|round(1) }}%)</span>
+                            </div>
+                            <div class="move-item">
+                                <span class="move-emoji">✋</span>
+                                <span class="move-count">{{ paper_count }}</span>
+                                <span class="move-percentage">({{ ((paper_count / total_rounds) * 100)|round(1) }}%)</span>
+                            </div>
+                            <div class="move-item">
+                                <span class="move-emoji">✌️</span>
+                                <span class="move-count">{{ scissors_count }}</span>
+                                <span class="move-percentage">({{ ((scissors_count / total_rounds) * 100)|round(1) }}%)</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        
+
         <div class="analysis-section">
             <h2>Game Analysis</h2>
             <div class="analysis-content">

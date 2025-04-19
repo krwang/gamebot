@@ -31,19 +31,9 @@ def view_game_analysis(game_id):
             # Store the analysis in the game data
             game_data['analysis'] = analysis
             storage.update_game(game_id, game_data)
-            
-        # Format game details
-        game_details = {
-            'id': game_id,
-            'type': game_data['game_type'],
-            'start_time': game_data.get('start_time', 'Unknown'),
-            'end_time': game_data.get('end_time', 'Unknown'),
-            'winner': game_data.get('winner', 'None'),
-            'outcome': game_data.get('outcome', 'Unknown')
-        }
         
         return render_template('game_analysis.html', 
-                             game=game_details,
+                             game=game_data,
                              analysis=analysis)
     except Exception as e:
         print(f"Error in view_game_analysis: {str(e)}")
