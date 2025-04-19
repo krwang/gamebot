@@ -176,7 +176,7 @@ def train_and_load_for_game(game_id, window_size=5):
     return model, None
 
 
-def predict_next_move(model, game_history, window_size=5):
+def predict_next_move(model, game_history, window_size=5, deterministic=True):
     choice_to_idx = {'rock': 0, 'paper': 1, 'scissors': 2}
     result_to_idx = {'player_win': 0, 'ai_win': 1, 'tie': 2}
     idx_to_choice = {0: 'rock', 1: 'paper', 2: 'scissors'}
@@ -200,8 +200,31 @@ def predict_next_move(model, game_history, window_size=5):
             ])
 
     if len(mv) == 0:
-        logger.info("No history, returning random choice")
-        return random.choice(['rock', 'paper', 'scissors'])
+        logger.info("No history, creating padded input")
+        # Create a padded input with all zeros
+        last = [[pad_choice, pad_choice, pad_result, 0, 0]] * window_size
+        logger.info(f"Padded input: {last}")
+        
+        tensor = torch.tensor([last], dtype=torch.long)
+        with torch.no_grad():
+            logits = model(tensor)
+            logger.info(f"Raw logits with no history: {logits}")
+            
+            # Convert logits to probabilities using softmax
+            probs = torch.softmax(logits, dim=-1)
+            logger.info(f"Probabilities with no history: {probs}")
+            
+            # Choose move based on deterministic parameter
+            if deterministic:
+                # Always choose the highest probability move
+                pred = torch.argmax(probs, dim=-1).item()
+                logger.info(f"Deterministic prediction with no history: {pred} ({idx_to_choice[pred]})")
+            else:
+                # Sample from the probability distribution
+                pred = torch.multinomial(probs, 1).item()
+                logger.info(f"Sampled prediction with no history: {pred} ({idx_to_choice[pred]})")
+            
+            return idx_to_choice[pred]
 
     last = mv[-window_size:]
     if len(last) < window_size:
@@ -219,9 +242,15 @@ def predict_next_move(model, game_history, window_size=5):
         probs = torch.softmax(logits, dim=-1)
         logger.info(f"Probabilities: {probs}")
         
-        # Sample from the probability distribution
-        pred = torch.multinomial(probs, 1).item()
-        logger.info(f"Sampled prediction: {pred} ({idx_to_choice[pred]})")
+        # Choose move based on deterministic parameter
+        if deterministic:
+            # Always choose the highest probability move
+            pred = torch.argmax(probs, dim=-1).item()
+            logger.info(f"Deterministic prediction: {pred} ({idx_to_choice[pred]})")
+        else:
+            # Sample from the probability distribution
+            pred = torch.multinomial(probs, 1).item()
+            logger.info(f"Sampled prediction: {pred} ({idx_to_choice[pred]})")
 
     return idx_to_choice[pred]
 

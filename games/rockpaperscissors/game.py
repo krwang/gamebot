@@ -160,8 +160,24 @@ class RockPaperScissorsGame(Game):
                 moves = game_data['moves'] if game_data and 'moves' in game_data else []
                 print(f"Game history length: {len(moves)}")
                 
-                # Use the model to predict next move
-                ai_choice = predict_next_move(board['custom_ai_model'], moves)
+                # Format moves for predict_next_move
+                formatted_moves = []
+                for move in moves:
+                    formatted_move = {
+                        'move_data': {
+                            'player_choice': move['move_data'].get('player_choice'),
+                            'ai_choice': move['move_data'].get('ai_choice'),
+                            'result': move['move_data'].get('result')
+                        },
+                        'board_state': {
+                            'player_score': move['board_state'].get('player_score', 0),
+                            'ai_score': move['board_state'].get('ai_score', 0)
+                        }
+                    }
+                    formatted_moves.append(formatted_move)
+                
+                # Use the model to predict next move with deterministic=True
+                ai_choice = predict_next_move(board['custom_ai_model'], formatted_moves, deterministic=True)
                 print(f"Custom model predicted move: {ai_choice}")
                 game_state['board']['ai_choice'] = ai_choice
                 print("=== END CUSTOM AI PREDICTION ===\n")

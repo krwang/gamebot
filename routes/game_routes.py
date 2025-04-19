@@ -1,8 +1,14 @@
 import os
+import tempfile
 from flask import Blueprint, request, jsonify, render_template, redirect, url_for
 from games.game_factory import GameFactory
 from game_history import GameHistory
 from games.rockpaperscissors.rps_model import load_trained_model, load_model_from_path
+import boto3
+
+# Configure S3
+S3_BUCKET = 'rps-ai'
+s3_client = boto3.client('s3')
 
 game_routes = Blueprint('game_routes', __name__)
 
@@ -87,16 +93,23 @@ def make_move():
         if use_custom_model:
             try:
                 print("\n=== ATTEMPTING TO LOAD CUSTOM MODEL ===")
-                model_path = os.path.join('uploads', 'custom_model.pth')
-                print(f"Looking for model at: {model_path}")
-                if os.path.exists(model_path):
-                    print("Model file found, loading...")
-                    custom_model = load_model_from_path(model_path)
-                    print(f"Model loaded successfully: {custom_model}")
-                    game_state['board']['custom_ai_model'] = custom_model
-                    print("Custom model added to game state")
-                else:
-                    print("No custom model file found")
+                model_name = data.get('model_name')
+                if not model_name:
+                    print("No model name provided")
+                    return jsonify({'error': 'Model name is required when using custom model'}), 400
+
+                # Download model from S3
+                model_path = os.path.join(tempfile.gettempdir(), f"{model_name}.pth")
+                s3_key = f"models/{model_name}.pth"
+                
+                print(f"Downloading model from S3: {s3_key}")
+                s3_client.download_file(S3_BUCKET, s3_key, model_path)
+                
+                print(f"Loading model from: {model_path}")
+                custom_model = load_model_from_path(model_path)
+                print(f"Model loaded successfully: {custom_model}")
+                game_state['board']['custom_ai_model'] = custom_model
+                print("Custom model added to game state")
                 print("=== END CUSTOM MODEL LOADING ===\n")
             except Exception as e:
                 print(f"\n=== ERROR LOADING CUSTOM MODEL ===")

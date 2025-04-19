@@ -270,6 +270,15 @@
         .instructions-list li:last-child {
             margin-bottom: 0;
         }
+        .model-selection {
+            margin-bottom: 2rem;
+        }
+        .model-select {
+            margin-top: 0.5rem;
+        }
+        .game-area {
+            margin-bottom: 2rem;
+        }
     </style>
 </head>
 <body>
@@ -287,137 +296,112 @@
 
     <div class="game-container">
         <div class="welcome-message">
-            <h1>Welcome to RPS.AI!</h1>
-            <h2 class="instructions-header">Instructions</h2>
-            <ol class="instructions-list">
-                <li>Play Rock, Paper, Scissors against our default AI.</li>
-                <li>When you're done, hit "End Game" to analyze your play and get coaching insights.</li>
-                <li>You can also train your own AI model based on your moves — then see how well it plays like you!</li>
-            </ol>
+            <h1>Play Against Your Own AI</h1>
+            <p>Test your skills against an AI model trained on your gameplay!</p>
         </div>
 
-        <div id="score" class="score">Round 1</div>
-
-        <div class="d-flex justify-content-center mb-4">
-            <button class="choice-btn" onclick="makeMove('rock')">✊</button>
-            <button class="choice-btn" onclick="makeMove('paper')">✋</button>
-            <button class="choice-btn" onclick="makeMove('scissors')">✌️</button>
-        </div>
-
-        <div id="result" class="result">
-            <label for="modelFile" style="cursor: pointer; display: block; width: 100%; height: 100%;">
-                Upload an AI model to play against! 📁
-            </label>
-            <input type="file" id="modelFile" accept=".pth" style="display: none;">
-        </div>
-
-        <div class="game-stats">
-            <div class="stat-card">
-                <h3 id="playerWins" class="player-wins">0</h3>
-                <p>Your Wins</p>
-            </div>
-            <div class="stat-card">
-                <h3 id="aiWins" class="ai-wins">0</h3>
-                <p>AI Wins</p>
-            </div>
-            <div class="stat-card">
-                <h3 id="draws" class="draws">0</h3>
-                <p>Draws</p>
+        <div class="model-selection">
+            <h3>Select AI Model</h3>
+            <div class="model-select">
+                <select class="form-select" id="aiModel">
+                    <option value="">Loading models...</option>
+                </select>
             </div>
         </div>
 
-        <div class="d-flex justify-content-center">
-            <button class="btn btn-danger end-game-btn" onclick="endGame()">End Game</button>
-        </div>
+        <div class="game-area">
+            <div id="score" class="score">Round 1</div>
 
-        <div class="analysis-section" id="analysisSection" style="display: none;">
-            <h3>Game Analysis</h3>
-            <div id="patterns">
-                <!-- Patterns will be populated here -->
+            <div class="d-flex justify-content-center mb-4">
+                <button class="choice-btn" onclick="makeMove('rock')">✊</button>
+                <button class="choice-btn" onclick="makeMove('paper')">✋</button>
+                <button class="choice-btn" onclick="makeMove('scissors')">✌️</button>
             </div>
-            <div class="suggestions">
-                <h5>Suggestions</h5>
-                <ul id="suggestions">
-                    <!-- Suggestions will be populated here -->
-                </ul>
+
+            <div id="result" class="result">
+                <div style="text-align: center;">
+                    Select an AI model to play against! 🤖
+                </div>
+            </div>
+
+            <div class="game-stats">
+                <div class="stat-card">
+                    <h3 id="playerWins" class="player-wins">0</h3>
+                    <p>Your Wins</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="aiWins" class="ai-wins">0</h3>
+                    <p>AI Wins</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="draws" class="draws">0</h3>
+                    <p>Draws</p>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-center">
+                <button class="btn btn-danger end-game-btn" onclick="endGame()">End Game</button>
+            </div>
+
+            <div class="analysis-section" id="analysisSection" style="display: none;">
+                <h3>Game Analysis</h3>
+                <div id="patterns">
+                    <!-- Patterns will be populated here -->
+                </div>
+                <div class="suggestions">
+                    <h5>Suggestions</h5>
+                    <ul id="suggestions">
+                        <!-- Suggestions will be populated here -->
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Wait for DOM to be fully loaded
+        // Load available models when the page loads
         document.addEventListener('DOMContentLoaded', function() {
-            // Check for model parameter in URL
+            // Get the model ID from URL parameters if coming from game analysis
             const urlParams = new URLSearchParams(window.location.search);
-            const modelName = urlParams.get('model');
+            const modelId = urlParams.get('model_id') || urlParams.get('model');
             
-            if (modelName) {
-                console.log('Loading model from URL parameter:', modelName);
-                // Fetch the model from S3
-                fetch(`/api/load-model?model=${encodeURIComponent(modelName)}`, {
-                    method: 'GET'
-                })
+            fetch('/api/list-models')
                 .then(response => response.json())
                 .then(data => {
                     if (data.error) {
-                        throw new Error(data.error);
-                    }
-                    customModelUploaded = true;
-                    document.getElementById('result').innerHTML = `
-                        <div>Model "${modelName}" loaded successfully! ✅</div>
-                        <div>Choose one of the above 👆 to get started!</div>
-                    `;
-                })
-                .catch(error => {
-                    console.error('Error loading model:', error);
-                    document.getElementById('result').innerHTML = `Error loading model: ${error.message}`;
-                });
-            }
-
-            console.log('DOM loaded, setting up file input listener');
-            const fileInput = document.getElementById('modelFile');
-            if (fileInput) {
-                fileInput.addEventListener('change', function(event) {
-                    console.log('File upload triggered!');
-                    const file = event.target.files[0];
-                    if (!file) {
-                        console.log('No file selected');
+                        console.error('Error loading models:', data.error);
                         return;
                     }
-                    console.log('Selected file:', file.name);
-
-                    const formData = new FormData();
-                    formData.append('model', file);
-
-                    fetch('/api/upload-model', {
-                        method: 'POST',
-                        body: formData
-                    })
-                    .then(response => {
-                        console.log('Server response:', response);
-                        return response.json();
-                    })
-                    .then(data => {
-                        console.log('Response data:', data);
-                        if (data.error) {
-                            throw new Error(data.error);
-                        }
-                        customModelUploaded = true;
-                        document.getElementById('result').innerHTML = `
-                            <div>Model uploaded successfully! ✅</div>
-                            <div>Choose one of the above 👆 to get started!</div>
-                        `;
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        document.getElementById('result').innerHTML = `Error: ${error.message}`;
+                    
+                    const modelSelect = document.getElementById('aiModel');
+                    
+                    // Clear loading message
+                    modelSelect.innerHTML = '<option value="">Select a model</option>';
+                    
+                    // Add models to dropdown
+                    data.models.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model;
+                        option.textContent = model;
+                        modelSelect.appendChild(option);
                     });
+                    
+                    // If we have a model ID from the URL, select it and start the game
+                    if (modelId) {
+                        modelSelect.value = modelId;
+                        updateResultMessage(modelId);
+                        startGame();
+                    }
+
+                    // Add event listener for model selection changes
+                    modelSelect.addEventListener('change', function() {
+                        updateResultMessage(this.value);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
                 });
-                console.log('File input change listener attached');
-            } else {
-                console.error('Could not find file input element!');
-            }
         });
 
         let gameId = null;
@@ -429,6 +413,12 @@
         let customModelUploaded = false;
 
         async function startGame() {
+            const selectedModel = document.getElementById('aiModel').value;
+            if (!selectedModel) {
+                alert('Please select an AI model to play against!');
+                return;
+            }
+            
             console.log('Starting new game...');
             try {
                 const response = await fetch('/api/new-game', {
@@ -438,7 +428,8 @@
                     },
                     body: JSON.stringify({ 
                         game_type: 'rockpaperscissors',
-                        use_custom_model: customModelUploaded
+                        use_custom_model: true,
+                        model_name: selectedModel
                     })
                 });
                 const data = await response.json();
@@ -457,11 +448,18 @@
                 await startGame();
             }
 
+            const selectedModel = document.getElementById('aiModel').value;
+            if (!selectedModel) {
+                alert('Please select an AI model to play against!');
+                return;
+            }
+
             try {
                 const requestBody = {
                     game_id: gameId,
                     choice: playerChoice,
-                    use_custom_model: customModelUploaded
+                    use_custom_model: true,
+                    model_name: selectedModel
                 };
                 console.log('Sending move request:', requestBody);
                 const response = await fetch('/api/move', {
@@ -556,6 +554,23 @@
             document.getElementById('playerWins').textContent = playerWins;
             document.getElementById('aiWins').textContent = aiWins;
             document.getElementById('draws').textContent = draws;
+        }
+
+        function updateResultMessage(modelId) {
+            const resultDiv = document.getElementById('result');
+            if (modelId) {
+                resultDiv.innerHTML = `
+                    <div style="text-align: center;">
+                        Model selected! Choose one of the above 👆 to get started!
+                    </div>
+                `;
+            } else {
+                resultDiv.innerHTML = `
+                    <div style="text-align: center;">
+                        Select an AI model to play against! 🤖
+                    </div>
+                `;
+            }
         }
     </script>
 </body>
