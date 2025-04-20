@@ -276,6 +276,84 @@
         }
         .model-select {
             margin-top: 0.5rem;
+            position: relative;
+        }
+        .custom-select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            background-color: white;
+            font-size: 1rem;
+            color: #2c3e50;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .custom-select:hover {
+            border-color: #1a73e8;
+        }
+        .custom-select.active {
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+        }
+        .custom-select::after {
+            content: '';
+            width: 16px;
+            height: 16px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%232c3e50' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: center;
+            transition: transform 0.3s ease;
+        }
+        .custom-select.active::after {
+            transform: rotate(180deg);
+        }
+        .custom-options {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            margin-top: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .custom-options.active {
+            display: block;
+        }
+        .custom-option {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .custom-option:hover {
+            background-color: #f8f9fa;
+        }
+        .custom-option.selected {
+            background-color: #e9ecef;
+            font-weight: 500;
+        }
+        .custom-options::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-options::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        .custom-options::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+        .custom-options::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
         }
         .game-area {
             margin-bottom: 2rem;
@@ -347,6 +425,9 @@
             .d-flex.justify-content-center.mb-4 {
                 gap: 0.5rem;
             }
+            .custom-options {
+                max-height: 200px;
+            }
         }
     </style>
 </head>
@@ -381,8 +462,12 @@
         <div class="model-selection">
             <h3>Select AI Model</h3>
             <div class="model-select">
-                <select class="form-select" id="aiModel">
-                    <option value="">Loading models...</option>
+                <div class="custom-select" id="customSelect">
+                    <span class="selected-value">Select a model</span>
+                </div>
+                <div class="custom-options" id="customOptions"></div>
+                <select id="aiModel" name="aiModel" style="display: none;">
+                    <option value="">Select a model</option>
                 </select>
             </div>
         </div>
@@ -444,6 +529,11 @@
             const urlParams = new URLSearchParams(window.location.search);
             const modelId = urlParams.get('model_id') || urlParams.get('model');
             
+            const customSelect = document.getElementById('customSelect');
+            const customOptions = document.getElementById('customOptions');
+            const selectedValue = customSelect.querySelector('.selected-value');
+            const hiddenSelect = document.getElementById('aiModel');
+            
             fetch('/api/list-models')
                 .then(response => response.json())
                 .then(data => {
@@ -452,34 +542,96 @@
                         return;
                     }
                     
-                    const modelSelect = document.getElementById('aiModel');
+                    // Sort models alphabetically
+                    const sortedModels = data.models.sort((a, b) => a.localeCompare(b));
                     
-                    // Clear loading message
-                    modelSelect.innerHTML = '<option value="">Select a model</option>';
-                    
-                    // Add models to dropdown
-                    data.models.forEach(model => {
-                        const option = document.createElement('option');
-                        option.value = model;
+                    // Add models to custom dropdown and hidden select
+                    sortedModels.forEach(model => {
+                        const option = document.createElement('div');
+                        option.className = 'custom-option';
                         option.textContent = model;
-                        modelSelect.appendChild(option);
+                        option.dataset.value = model;
+                        customOptions.appendChild(option);
+                        
+                        const hiddenOption = document.createElement('option');
+                        hiddenOption.value = model;
+                        hiddenOption.textContent = model;
+                        hiddenSelect.appendChild(hiddenOption);
                     });
                     
-                    // If we have a model ID from the URL, select it and start the game
+                    // If we have a model ID from the URL, select it
                     if (modelId) {
-                        modelSelect.value = modelId;
-                        updateResultMessage(modelId);
-                        startGame();
+                        const option = Array.from(customOptions.children).find(opt => opt.dataset.value === modelId);
+                        if (option) {
+                            selectOption(option);
+                            startGame();
+                        }
                     }
-
-                    // Add event listener for model selection changes
-                    modelSelect.addEventListener('change', function() {
-                        updateResultMessage(this.value);
-                    });
                 })
                 .catch(error => {
                     console.error('Error:', error);
                 });
+            
+            // Toggle dropdown
+            customSelect.addEventListener('click', function() {
+                customSelect.classList.toggle('active');
+                customOptions.classList.toggle('active');
+            });
+            
+            // Handle option selection
+            customOptions.addEventListener('click', function(e) {
+                const option = e.target.closest('.custom-option');
+                if (option) {
+                    selectOption(option);
+                    customSelect.classList.remove('active');
+                    customOptions.classList.remove('active');
+                    
+                    // Reset game state
+                    gameId = null;
+                    playerWins = 0;
+                    aiWins = 0;
+                    draws = 0;
+                    
+                    // Update UI
+                    document.getElementById('score').textContent = 'Round 1';
+                    document.getElementById('playerWins').textContent = '0';
+                    document.getElementById('aiWins').textContent = '0';
+                    document.getElementById('draws').textContent = '0';
+                    document.getElementById('result').className = 'result';
+                    document.getElementById('result').innerHTML = `
+                        <div style="text-align: center;">
+                            Model selected! Choose one of the above 👆 to get started!
+                        </div>
+                    `;
+                    
+                    // Start new game
+                    startGame();
+                }
+            });
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!customSelect.contains(e.target)) {
+                    customSelect.classList.remove('active');
+                    customOptions.classList.remove('active');
+                }
+            });
+            
+            function selectOption(option) {
+                // Remove selected class from all options
+                customOptions.querySelectorAll('.custom-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                });
+                
+                // Add selected class to chosen option
+                option.classList.add('selected');
+                
+                // Update selected value
+                selectedValue.textContent = option.textContent;
+                
+                // Update hidden select value
+                hiddenSelect.value = option.dataset.value;
+            }
         });
 
         let gameId = null;

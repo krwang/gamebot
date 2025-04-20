@@ -126,7 +126,90 @@
             text-align: center;
         }
         .model-select {
-            margin-bottom: 1rem;
+            margin-top: 0.5rem;
+            position: relative;
+        }
+        .custom-select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            background-color: white;
+            font-size: 1rem;
+            color: #2c3e50;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .custom-select:hover {
+            border-color: #1a73e8;
+        }
+        .custom-select.active {
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+        }
+        .custom-select::after {
+            content: '';
+            width: 16px;
+            height: 16px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%232c3e50' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: center;
+            transition: transform 0.3s ease;
+        }
+        .custom-select.active::after {
+            transform: rotate(180deg);
+        }
+        .custom-options {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            margin-top: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .custom-options.active {
+            display: block;
+        }
+        .custom-option {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .custom-option:hover {
+            background-color: #f8f9fa;
+        }
+        .custom-option.selected {
+            background-color: #e9ecef;
+            font-weight: 500;
+        }
+        .custom-options::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-options::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        .custom-options::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+        .custom-options::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        @media (max-width: 768px) {
+            .custom-options {
+                max-height: 200px;
+            }
         }
         .rounds-input {
             margin: 1rem 0;
@@ -258,16 +341,24 @@
                 <div class="col-md-6">
                     <div class="model-select">
                         <label for="model1" class="form-label">AI Model 1</label>
-                        <select class="form-select" id="model1">
-                            <option value="">Loading models...</option>
+                        <div class="custom-select" id="customSelect1">
+                            <span class="selected-value">Select first model</span>
+                        </div>
+                        <div class="custom-options" id="customOptions1"></div>
+                        <select id="model1" name="model1" style="display: none;">
+                            <option value="">Select first model</option>
                         </select>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="model-select">
                         <label for="model2" class="form-label">AI Model 2</label>
-                        <select class="form-select" id="model2">
-                            <option value="">Loading models...</option>
+                        <div class="custom-select" id="customSelect2">
+                            <span class="selected-value">Select second model</span>
+                        </div>
+                        <div class="custom-options" id="customOptions2"></div>
+                        <select id="model2" name="model2" style="display: none;">
+                            <option value="">Select second model</option>
                         </select>
                     </div>
                 </div>
@@ -306,6 +397,20 @@
     <script>
         // Load available models when the page loads
         document.addEventListener('DOMContentLoaded', function() {
+            // Get the model IDs from URL parameters if coming from game analysis
+            const urlParams = new URLSearchParams(window.location.search);
+            const model1Id = urlParams.get('model1_id') || urlParams.get('model1');
+            const model2Id = urlParams.get('model2_id') || urlParams.get('model2');
+            
+            const customSelect1 = document.getElementById('customSelect1');
+            const customSelect2 = document.getElementById('customSelect2');
+            const customOptions1 = document.getElementById('customOptions1');
+            const customOptions2 = document.getElementById('customOptions2');
+            const selectedValue1 = customSelect1.querySelector('.selected-value');
+            const selectedValue2 = customSelect2.querySelector('.selected-value');
+            const hiddenSelect1 = document.getElementById('model1');
+            const hiddenSelect2 = document.getElementById('model2');
+            
             fetch('/api/list-models')
                 .then(response => response.json())
                 .then(data => {
@@ -314,30 +419,117 @@
                         return;
                     }
                     
-                    const model1Select = document.getElementById('model1');
-                    const model2Select = document.getElementById('model2');
+                    // Sort models alphabetically
+                    const sortedModels = data.models.sort((a, b) => a.localeCompare(b));
                     
-                    // Clear loading message
-                    model1Select.innerHTML = '<option value="">Select a model</option>';
-                    model2Select.innerHTML = '<option value="">Select a model</option>';
-                    
-                    // Add models to both dropdowns
-                    data.models.forEach(model => {
-                        const option1 = document.createElement('option');
-                        option1.value = model;
+                    // Add models to custom dropdowns and hidden selects
+                    sortedModels.forEach(model => {
+                        const option1 = document.createElement('div');
+                        const option2 = document.createElement('div');
+                        option1.className = 'custom-option';
+                        option2.className = 'custom-option';
                         option1.textContent = model;
-                        
-                        const option2 = document.createElement('option');
-                        option2.value = model;
                         option2.textContent = model;
+                        option1.dataset.value = model;
+                        option2.dataset.value = model;
+                        customOptions1.appendChild(option1);
+                        customOptions2.appendChild(option2);
                         
-                        model1Select.appendChild(option1);
-                        model2Select.appendChild(option2);
+                        const hiddenOption1 = document.createElement('option');
+                        const hiddenOption2 = document.createElement('option');
+                        hiddenOption1.value = model;
+                        hiddenOption2.value = model;
+                        hiddenOption1.textContent = model;
+                        hiddenOption2.textContent = model;
+                        hiddenSelect1.appendChild(hiddenOption1);
+                        hiddenSelect2.appendChild(hiddenOption2);
                     });
+                    
+                    // If we have model IDs from the URL, select them
+                    if (model1Id) {
+                        const option = Array.from(customOptions1.children).find(opt => opt.dataset.value === model1Id);
+                        if (option) {
+                            selectOption(option, 1);
+                        }
+                    }
+                    if (model2Id) {
+                        const option = Array.from(customOptions2.children).find(opt => opt.dataset.value === model2Id);
+                        if (option) {
+                            selectOption(option, 2);
+                        }
+                    }
                 })
                 .catch(error => {
                     console.error('Error:', error);
                 });
+            
+            // Toggle dropdowns
+            customSelect1.addEventListener('click', function() {
+                customSelect1.classList.toggle('active');
+                customOptions1.classList.toggle('active');
+                customSelect2.classList.remove('active');
+                customOptions2.classList.remove('active');
+            });
+            
+            customSelect2.addEventListener('click', function() {
+                customSelect2.classList.toggle('active');
+                customOptions2.classList.toggle('active');
+                customSelect1.classList.remove('active');
+                customOptions1.classList.remove('active');
+            });
+            
+            // Handle option selection
+            customOptions1.addEventListener('click', function(e) {
+                const option = e.target.closest('.custom-option');
+                if (option) {
+                    selectOption(option, 1);
+                    customSelect1.classList.remove('active');
+                    customOptions1.classList.remove('active');
+                    updateResultMessage(hiddenSelect1.value, hiddenSelect2.value);
+                }
+            });
+            
+            customOptions2.addEventListener('click', function(e) {
+                const option = e.target.closest('.custom-option');
+                if (option) {
+                    selectOption(option, 2);
+                    customSelect2.classList.remove('active');
+                    customOptions2.classList.remove('active');
+                    updateResultMessage(hiddenSelect1.value, hiddenSelect2.value);
+                }
+            });
+            
+            // Close dropdowns when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!customSelect1.contains(e.target)) {
+                    customSelect1.classList.remove('active');
+                    customOptions1.classList.remove('active');
+                }
+                if (!customSelect2.contains(e.target)) {
+                    customSelect2.classList.remove('active');
+                    customOptions2.classList.remove('active');
+                }
+            });
+            
+            function selectOption(option, dropdownNumber) {
+                const customOptions = dropdownNumber === 1 ? customOptions1 : customOptions2;
+                const selectedValue = dropdownNumber === 1 ? selectedValue1 : selectedValue2;
+                const hiddenSelect = dropdownNumber === 1 ? hiddenSelect1 : hiddenSelect2;
+                
+                // Remove selected class from all options
+                customOptions.querySelectorAll('.custom-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                });
+                
+                // Add selected class to chosen option
+                option.classList.add('selected');
+                
+                // Update selected value
+                selectedValue.textContent = option.textContent;
+                
+                // Update hidden select value
+                hiddenSelect.value = option.dataset.value;
+            }
         });
 
         function startBattle() {
