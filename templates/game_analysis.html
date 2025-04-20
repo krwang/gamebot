@@ -361,6 +361,27 @@
                 margin-top: 90px;
             }
         }
+        .promo-banner {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            text-align: center;
+            font-size: 1.2rem;
+            line-height: 1.6;
+            width: 100%;
+            box-sizing: border-box;
+            margin-top: 0;
+        }
+        .promo-banner strong {
+            font-weight: 600;
+        }
+        .modal-body small {
+            display: block;
+            margin-top: 1rem;
+            color: #6c757d;
+        }
     </style>
 </head>
 <body>
@@ -480,11 +501,18 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+                    <div class="promo-banner">
+                        <strong>🎉 If participating in the $5 challenge, name your model your Venmo handle (e.g. @Dennis‑Garcia) so we can easily identify & pay winners!</strong><br>
+                        <strong><br>Remember, only the first 100 winners will be eligible for the reward.</strong><br>
+                    </div>
                     <div class="mb-3">
                         <label for="modelName" class="form-label">Enter a name for your AI model</label>
-                        <input type="text" class="form-control" id="modelName" placeholder="e.g., MyRPSMaster">
+                        <input type="text" class="form-control" id="modelName" placeholder="e.g., @My-Venmo-Handle" autocomplete="off">
                         <div id="modelNameError" class="text-danger mt-2" style="display: none;"></div>
-                        <div class="form-text">Name your model your Venmo handle for a chance to win $5! </div>
+                        <small>
+                            No Venmo? No problem—still train &amp; beat DennisBot, then email your bot name to 
+                            <a href="mailto:dennis@demoxlab.xyz">dennis@demoxlab.xyz</a> to claim your reward.
+                        </small>
                     </div>
                 </div>
                 <div class="modal-footer">
