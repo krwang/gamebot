@@ -416,11 +416,18 @@
                 .then(data => {
                     if (data.error) {
                         console.error('Error loading models:', data.error);
+                        alert('Failed to load available models. Please try again later.');
                         return;
                     }
                     
                     // Sort models alphabetically
                     const sortedModels = data.models.sort((a, b) => a.localeCompare(b));
+                    
+                    // Clear existing options
+                    customOptions1.innerHTML = '';
+                    customOptions2.innerHTML = '';
+                    hiddenSelect1.innerHTML = '<option value="">Select first model</option>';
+                    hiddenSelect2.innerHTML = '<option value="">Select second model</option>';
                     
                     // Add models to custom dropdowns and hidden selects
                     sortedModels.forEach(model => {
@@ -450,17 +457,22 @@
                         const option = Array.from(customOptions1.children).find(opt => opt.dataset.value === model1Id);
                         if (option) {
                             selectOption(option, 1);
+                        } else {
+                            console.warn(`Model ${model1Id} not found in available models`);
                         }
                     }
                     if (model2Id) {
                         const option = Array.from(customOptions2.children).find(opt => opt.dataset.value === model2Id);
                         if (option) {
                             selectOption(option, 2);
+                        } else {
+                            console.warn(`Model ${model2Id} not found in available models`);
                         }
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
+                    alert('Failed to load available models. Please try again later.');
                 });
             
             // Toggle dropdowns

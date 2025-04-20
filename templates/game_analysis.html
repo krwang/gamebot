@@ -483,6 +483,7 @@
                     <div class="mb-3">
                         <label for="modelName" class="form-label">Enter a name for your AI model</label>
                         <input type="text" class="form-control" id="modelName" placeholder="e.g., MyRPSMaster">
+                        <div id="modelNameError" class="text-danger mt-2" style="display: none;"></div>
                         <div class="form-text">This name will be used to identify your model in S3.</div>
                     </div>
                 </div>
@@ -509,6 +510,12 @@
 
         function showModelNameModal(gameId) {
             currentGameId = gameId;
+            // Clear any previous error messages
+            const errorDiv = document.getElementById('modelNameError');
+            errorDiv.style.display = 'none';
+            errorDiv.textContent = '';
+            // Clear any previous input
+            document.getElementById('modelName').value = '';
             const modal = new bootstrap.Modal(document.getElementById('modelNameModal'));
             modal.show();
         }
@@ -516,9 +523,11 @@
         async function trainAI() {
             const modelNameInput = document.getElementById('modelName');
             const modelName = modelNameInput.value.trim();
+            const errorDiv = document.getElementById('modelNameError');
             
             if (!modelName) {
-                showToast('Please enter a name for your AI model', 'warning');
+                errorDiv.textContent = 'Please enter a name for your AI model';
+                errorDiv.style.display = 'block';
                 return;
             }
             
@@ -526,14 +535,31 @@
             trainButton.disabled = true;
             trainButton.classList.add('loading');
             
-            // Show the training overlay
-            document.getElementById('trainingOverlay').style.display = 'flex';
-            
-            // Close the modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('modelNameModal'));
-            modal.hide();
-            
             try {
+                // Get the list of existing models from S3
+                const listResponse = await fetch('/api/list-models');
+                if (!listResponse.ok) {
+                    throw new Error('Failed to fetch existing models');
+                }
+                const { models: existingModels } = await listResponse.json();
+                
+                // Check if the model name already exists
+                if (existingModels.includes(modelName)) {
+                    errorDiv.textContent = `The name "${modelName}" is already taken. Please choose a different name.`;
+                    errorDiv.style.display = 'block';
+                    trainButton.disabled = false;
+                    trainButton.classList.remove('loading');
+                    return;
+                }
+                
+                // If we get here, the model name is available
+                // Show the training overlay
+                document.getElementById('trainingOverlay').style.display = 'flex';
+                
+                // Close the modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('modelNameModal'));
+                modal.hide();
+                
                 const response = await fetch('/api/train-ai', {
                     method: 'POST',
                     headers: {
@@ -550,22 +576,22 @@
                 
                 if (response.ok) {
                     showToast('AI model trained and uploaded to S3 successfully!', 'success');
-                    // Redirect to custom_ai.html with the model name
-                    window.location.href = `/custom-ai?model=${encodeURIComponent(modelName)}`;
+                    // Redirect to ai-vs-ai.html with the model name and RockLee preloaded
+                    window.location.href = `/ai-vs-ai?model1=${encodeURIComponent(modelName)}&model2=RockLee`;
                 } else {
-                    showToast(data.error || 'Failed to train and upload AI model', 'danger');
+                    errorDiv.textContent = data.error || 'Failed to train and upload AI model';
+                    errorDiv.style.display = 'block';
                     trainButton.disabled = false;
                 }
             } catch (error) {
-                showToast('An error occurred while training and uploading the AI model', 'danger');
                 console.error('Error:', error);
+                errorDiv.textContent = 'An error occurred while training and uploading the AI model';
+                errorDiv.style.display = 'block';
                 trainButton.disabled = false;
             } finally {
                 trainButton.classList.remove('loading');
                 // Hide the training overlay
                 document.getElementById('trainingOverlay').style.display = 'none';
-                // Clear the input for next time
-                modelNameInput.value = '';
             }
         }
 
