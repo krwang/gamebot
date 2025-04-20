@@ -10,6 +10,7 @@ import boto3
 import json
 import time
 import random
+from google_sheets import sheets_manager
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -445,6 +446,23 @@ def ai_battle():
             
             # End the game
             game_history.end_game('completed', 'Model1' if model1_score > model2_score else 'Model2' if model2_score > model1_score else None)
+            
+            # Check if DennisBot was defeated and log to Google Sheets
+            if 'DennisBot' in [model1_name, model2_name]:
+                if model1_name == 'DennisBot' and model2_score > model1_score:
+                    # DennisBot was model1 and lost
+                    sheets_manager.log_victory(
+                        model_name=model2_name,
+                        score=f"{model2_score}-{model1_score}",
+                        ip_address=request.remote_addr
+                    )
+                elif model2_name == 'DennisBot' and model1_score > model2_score:
+                    # DennisBot was model2 and lost
+                    sheets_manager.log_victory(
+                        model_name=model1_name,
+                        score=f"{model1_score}-{model2_score}",
+                        ip_address=request.remote_addr
+                    )
             
             # Yield final result
             final_data = {

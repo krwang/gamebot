@@ -604,8 +604,8 @@
                 
                 if (response.ok) {
                     showToast('AI model trained and uploaded to S3 successfully!', 'success');
-                    // Redirect to ai-vs-ai.html with the model name and RockLee preloaded
-                    window.location.href = `/ai-vs-ai?model1=${encodeURIComponent(modelName)}&model2=RockLee`;
+                    // Redirect to ai-vs-ai.html with the model name and DennisBot preloaded
+                    window.location.href = `/ai-vs-ai?model1=${encodeURIComponent(modelName)}&model2=DennisBot`;
                 } else {
                     errorDiv.textContent = data.error || 'Failed to train and upload AI model';
                     errorDiv.style.display = 'block';
