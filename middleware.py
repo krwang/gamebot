@@ -7,8 +7,8 @@ def track_visitor(app):
     
     @app.before_request
     def before_request():
-        # Don't track visits to the stats page itself
-        if not request.path.startswith('/app-stats'):
+        # Only track visits to the homepage
+        if request.path == '/':
             tracker.track_visit()
     
     return app 

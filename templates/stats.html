@@ -34,6 +34,16 @@
         .table th {
             background: #f8f9fa;
         }
+        .recent-visitors-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .recent-visitors-container thead {
+            position: sticky;
+            top: 0;
+            background: #f8f9fa;
+            z-index: 1;
+        }
     </style>
 </head>
 <body>
@@ -59,7 +69,7 @@
                 <h5 class="mb-0">Recent Visitors</h5>
             </div>
             <div class="card-body">
-                <div class="table-responsive">
+                <div class="table-responsive recent-visitors-container">
                     <table class="table table-striped">
                         <thead>
                             <tr>
