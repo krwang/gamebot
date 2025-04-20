@@ -52,8 +52,6 @@ class GoogleSheetsService:
             }
             
             logger.info("Initializing Google Sheets service...")
-            logger.info(f"Project ID: {credentials['project_id']}")
-            logger.info(f"Client Email: {credentials['client_email']}")
             
             # Create credentials object
             creds = service_account.Credentials.from_service_account_info(
@@ -74,15 +72,12 @@ class GoogleSheetsService:
         try:
             # Verify the secret key
             expected_key = os.getenv('VICTORY_LOG_SECRET')
-            logger.info(f"Expected key: {expected_key}")
-            logger.info(f"Provided key: {secret_key}")
-            
             if not expected_key:
                 logger.error("VICTORY_LOG_SECRET environment variable is not set")
                 return
                 
             if secret_key != expected_key:
-                logger.error(f"Secret key mismatch. Expected: {expected_key}, Got: {secret_key}")
+                logger.error("Invalid secret key")
                 return
             
             # Get the spreadsheet ID from environment variable
