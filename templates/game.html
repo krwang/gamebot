@@ -343,6 +343,39 @@
                 gap: 0.5rem;
             }
         }
+        .training-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        .training-loader {
+            text-align: center;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #1a73e8;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        .training-text {
+            color: #1a73e8;
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -421,6 +454,14 @@
                     <!-- Suggestions will be populated here -->
                 </ul>
             </div>
+        </div>
+    </div>
+
+    <!-- Training Overlay -->
+    <div id="trainingOverlay" class="training-overlay">
+        <div class="training-loader">
+            <div class="spinner"></div>
+            <div class="training-text">Ending game and preparing analysis...</div>
         </div>
     </div>
 
@@ -532,17 +573,35 @@
         async function endGame() {
             if (!gameId) return;
             
+            // Show the training overlay
+            const overlay = document.getElementById('trainingOverlay');
+            if (overlay) {
+                overlay.style.display = 'flex';
+            }
+            
             try {
                 const response = await fetch(`/api/end-game/${gameId}`, {
                     method: 'POST'
                 });
-                const data = await response.json();
                 
-                if (data.redirect_url) {
-                    window.location.href = data.redirect_url;
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.redirect_url) {
+                        window.location.href = data.redirect_url;
+                    }
+                } else {
+                    const error = await response.json();
+                    alert(error.error || 'Failed to end game');
+                    if (overlay) {
+                        overlay.style.display = 'none';
+                    }
                 }
             } catch (error) {
-                console.error('Error ending game:', error);
+                console.error('Error:', error);
+                alert('An error occurred while ending the game');
+                if (overlay) {
+                    overlay.style.display = 'none';
+                }
             }
         }
 
