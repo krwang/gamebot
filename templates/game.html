@@ -248,6 +248,8 @@
             background-color: #c82333;
             border-color: #c82333;
             margin-top: 2rem;
+            font-size: 1.25rem;
+            padding: 0.75rem 1.5rem;
         }
         .end-game-btn:hover {
             background-color: #bd2130;
@@ -258,18 +260,79 @@
             margin-bottom: 1.5rem;
             color: #2c3e50;
         }
+        .instructions-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            color: #2c3e50;
+            font-weight: 600;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+            padding: 0.5rem;
+            border-radius: 8px;
+            background-color: rgba(0, 0, 0, 0.03);
+        }
+        .instructions-toggle:hover {
+            color: #1a73e8;
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+        .instructions-toggle span {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .instructions-toggle .emoji {
+            display: inline-block;
+            margin: 0 0.25rem;
+        }
+        .instructions-toggle.expanded .chevron {
+            transform: rotate(180deg);
+        }
+        .instructions-toggle .click-me {
+            font-size: 1rem;
+            color: #1a73e8;
+            font-weight: 500;
+            margin-left: 0.5rem;
+        }
+        .instructions-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            margin-bottom: 1rem;
+        }
+        .instructions-content.expanded {
+            max-height: none;
+            overflow: visible;
+        }
         .instructions-list {
             list-style-type: decimal;
             padding-left: 1.5rem;
             text-align: left;
             font-size: 1.3rem;
             line-height: 1.6;
+            margin: 0;
         }
         .instructions-list li {
             margin-bottom: 0.75rem;
         }
         .instructions-list li:last-child {
             margin-bottom: 0;
+        }
+        .promo-banner {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1.5rem;
+            text-align: center;
+            font-size: 1.2rem;
+            line-height: 1.6;
+        }
+        .promo-banner strong {
+            font-weight: 600;
         }
         /* Mobile Menu Styles */
         .hamburger-menu {
@@ -403,13 +466,29 @@
     <div class="game-container">
         <div class="welcome-message">
             <h1>Welcome to RPS.AI!</h1>
-            <h2 class="instructions-header">Instructions</h2>
-            <ol class="instructions-list">
-                <li>Play Rock, Paper, Scissors against our default AI.</li>
-                <li>Hit "End Game" to analyze your play and get coaching insights.</li>
-                <li>Train your own AI model based on your moves — then see how well it plays like you!</li>
-                <li>Finally see how your AI model performs against other AI models!</li>
-            </ol>
+            <div class="instructions-toggle collapsed" onclick="toggleInstructions()">
+                <span>
+                    <span class="emoji">🚨</span>
+                    Instructions - Click me first!
+                    <span class="emoji">🚨</span>
+                </span>
+            </div>
+            <div class="instructions-content">
+                <ol class="instructions-list">
+                    <li>
+                        Play multiple rounds against our default AI in Rock, Paper, Scissors — 
+                        20 rounds is a solid start, 50 rounds makes your custom AI play even more like you 
+                        — but feel free to wrap up sooner if you just want quick insights.
+                    </li>
+                    <li>Click "End Game" to review your play and get coaching tips.</li>
+                    <li>Train a custom AI on your moves, then pit it against other users' models.</li>
+                    <li>Or challenge yourself by playing against your own or other users' AI models.</li>
+                </ol>
+                <div class="promo-banner">
+                    <strong>🎉 Be one of the first 100 to train your custom model and beat DennisBot to earn $5 via Venmo!</strong><br>
+                    (Step‑by‑step instructions appear in the app)
+                </div>
+            </div>
         </div>
 
         <div id="score" class="score">Round 1</div>
@@ -421,7 +500,7 @@
         </div>
 
         <div id="result" class="result">
-            Choose one of the above 👆 to get started!
+            Choose one of the above to get started!
         </div>
 
         <div class="game-stats">
@@ -673,6 +752,15 @@
         function toggleMobileMenu() {
             const mobileMenu = document.getElementById('mobileMenu');
             mobileMenu.classList.toggle('active');
+        }
+
+        function toggleInstructions() {
+            const toggle = document.querySelector('.instructions-toggle');
+            const content = document.querySelector('.instructions-content');
+            
+            toggle.classList.toggle('collapsed');
+            toggle.classList.toggle('expanded');
+            content.classList.toggle('expanded');
         }
     </script>
 </body>

@@ -129,13 +129,13 @@ def train_and_save_model(game_data, window_size=5, epochs=30, batch_size=8, lr=5
     logger.info(f"Training model with {num_rounds} rounds of data")
 
     # Adjust parameters based on number of rounds
-    if num_rounds < 20:
+    if num_rounds < 19:
         # Small dataset adjustments
         window_size = min(3, window_size)  # Smaller window for less data
         epochs = 20  # Fewer epochs to prevent overfitting
         batch_size = min(4, batch_size)  # Smaller batch size
         lr = 1e-3  # Higher learning rate
-    elif num_rounds < 50:
+    elif num_rounds < 49:
         # Medium dataset adjustments
         window_size = min(4, window_size)
         epochs = 25
