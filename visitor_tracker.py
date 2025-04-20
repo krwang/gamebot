@@ -62,16 +62,31 @@ class VisitorTracker:
         conn = sqlite3.connect(str(self.db_path))
         cursor = conn.cursor()
         
-        # Update or insert visitor
+        # First check if this visitor already exists
         cursor.execute('''
-            INSERT INTO visitors (visitor_id, ip, user_agent, last_visit, visit_count)
-            VALUES (?, ?, ?, ?, 1)
-            ON CONFLICT(visitor_id) DO UPDATE SET
-                ip = ?,
-                user_agent = ?,
-                last_visit = ?,
-                visit_count = visit_count + 1
-        ''', (visitor_id, ip, user_agent, timestamp, ip, user_agent, timestamp))
+            SELECT visitor_id FROM visitors 
+            WHERE visitor_id = ? OR (ip = ? AND user_agent = ?)
+        ''', (visitor_id, ip, user_agent))
+        existing_visitor = cursor.fetchone()
+        
+        if existing_visitor:
+            # Update existing visitor
+            existing_id = existing_visitor[0]
+            cursor.execute('''
+                UPDATE visitors 
+                SET last_visit = ?,
+                    visit_count = visit_count + 1
+                WHERE visitor_id = ?
+            ''', (timestamp, existing_id))
+            
+            # Use the existing visitor_id
+            visitor_id = existing_id
+        else:
+            # Insert new visitor
+            cursor.execute('''
+                INSERT INTO visitors (visitor_id, ip, user_agent, last_visit, visit_count)
+                VALUES (?, ?, ?, ?, 1)
+            ''', (visitor_id, ip, user_agent, timestamp))
         
         # Record the visit
         cursor.execute('''
