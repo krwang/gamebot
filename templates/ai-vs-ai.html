@@ -305,9 +305,120 @@
             width: fit-content;
             display: block;
         }
+        /* Celebration Overlay Styles */
+        .celebration-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: white;
+            text-align: center;
+            padding: 2rem;
+            opacity: 1;
+        }
+        .celebration-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+        .celebration-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 600px;
+            color: #2c3e50;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            transform: scale(1);
+            opacity: 1;
+            transition: all 0.5s ease;
+            position: relative;  /* Added to ensure content stays above confetti */
+            z-index: 1;  /* Added to ensure content stays above confetti */
+        }
+        .celebration-overlay.active .celebration-content {
+            transform: scale(1);
+            opacity: 1;
+        }
+        .celebration-content h2 {
+            color: #1a73e8;
+            margin-bottom: 1.5rem;
+            font-size: 2rem;
+        }
+        .left-tada {
+            margin-right: 1.0rem;
+            margin-left: 0;
+        }
+        .right-tada {
+            margin-left: 1.0rem;
+            margin-right: 0;
+        }
+        @media (max-width: 768px) {
+            .celebration-content h2 .mobile-hide {
+                display: none;
+            }
+        }
+        .celebration-content p {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+        .celebration-content .congrats-text {
+            font-size: 1.75rem;
+            font-weight: bold;
+            color: #000;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+        .close-celebration {
+            background: #1a73e8;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .close-celebration:hover {
+            background: #1557b0;
+            transform: translateY(-2px);
+        }
+        @keyframes confetti {
+            0% { 
+                transform: translateY(-100px) rotate(0deg);
+                opacity: 1;
+            }
+            100% { 
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background: #f00;
+            animation: confetti 3s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
     </style>
 </head>
 <body>
+    <!-- Add celebration overlay -->
+    <div class="celebration-overlay" id="celebrationOverlay">
+        <div class="celebration-content">
+            <h2><span class="left-tada">🎉</span>Congratulations!<span class="right-tada mobile-hide">🎉</span></h2>
+            <div class="congrats-text">You've defeated DennisBot!</div>
+            <p>We are validating the results of the competition. If your bot was within the first 100 bots to beat DennisBot, you will receive $5 via venmo or the payment option of your choice if you specified via email.</p>
+            <button class="close-celebration" onclick="closeCelebration()">Close</button>
+        </div>
+    </div>
     <nav class="navbar navbar-expand-lg navbar-light">
         <div class="container">
             <a class="navbar-brand" href="/">RPS.AI</a>
@@ -628,9 +739,17 @@
                             if (data.model1_score > data.model2_score) {
                                 resultDiv.className = 'battle-result win';
                                 resultDiv.textContent = `${model1} wins!`;
+                                // Show celebration only if DennisBot was model2 and lost
+                                if (model2 === 'DennisBot') {
+                                    showCelebration();
+                                }
                             } else if (data.model2_score > data.model1_score) {
                                 resultDiv.className = 'battle-result lose';
                                 resultDiv.textContent = `${model2} wins!`;
+                                // Show celebration only if DennisBot was model1 and lost
+                                if (model1 === 'DennisBot') {
+                                    showCelebration();
+                                }
                             } else {
                                 resultDiv.className = 'battle-result tie';
                                 resultDiv.textContent = "It's a tie!";
@@ -677,6 +796,84 @@
                 // Re-enable the start button in case of error
                 startButton.disabled = false;
                 startButton.textContent = 'Start Battle';
+            });
+        }
+
+        function showCelebration() {
+            const overlay = document.getElementById('celebrationOverlay');
+            overlay.style.display = 'flex';
+            
+            // Create confetti
+            const colors = ['#f00', '#0f0', '#00f', '#ff0', '#f0f', '#0ff'];
+            const shapes = ['square', 'circle', 'triangle'];
+            let confettiCount = 0;
+            const maxConfetti = 500;
+            
+            function createConfetti() {
+                if (confettiCount >= maxConfetti) return;
+                
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                
+                // Random position at the top of the screen
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.top = '-10px';
+                
+                // Random animation duration between 2-4 seconds
+                const duration = 2 + Math.random() * 2;
+                confetti.style.animationDuration = duration + 's';
+                
+                // Random delay between 0-1 seconds
+                confetti.style.animationDelay = Math.random() * 1 + 's';
+                
+                // Random color
+                confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                
+                // Random shape
+                const shape = shapes[Math.floor(Math.random() * shapes.length)];
+                if (shape === 'circle') {
+                    confetti.style.borderRadius = '50%';
+                } else if (shape === 'triangle') {
+                    confetti.style.width = '0';
+                    confetti.style.height = '0';
+                    confetti.style.borderLeft = '5px solid transparent';
+                    confetti.style.borderRight = '5px solid transparent';
+                    confetti.style.borderBottom = '10px solid ' + confetti.style.background;
+                    confetti.style.background = 'transparent';
+                }
+                
+                // Random size
+                const size = 5 + Math.random() * 10;
+                confetti.style.width = size + 'px';
+                confetti.style.height = size + 'px';
+                
+                document.body.appendChild(confetti);
+                confettiCount++;
+                
+                // Create next confetti piece after a short delay
+                setTimeout(createConfetti, 20);
+            }
+            
+            // Start creating confetti immediately
+            createConfetti();
+            
+            // Create multiple initial bursts
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => {
+                    for (let j = 0; j < 50; j++) {
+                        createConfetti();
+                    }
+                }, i * 200);
+            }
+        }
+
+        function closeCelebration() {
+            const overlay = document.getElementById('celebrationOverlay');
+            overlay.style.display = 'none';
+            
+            // Remove all confetti
+            document.querySelectorAll('.confetti').forEach(confetti => {
+                confetti.remove();
             });
         }
 
