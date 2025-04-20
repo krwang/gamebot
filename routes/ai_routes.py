@@ -349,6 +349,9 @@ def ai_battle():
                 }
             })
         
+        # Capture IP address before starting the generator
+        ip_address = request.remote_addr
+        
         def generate():
             nonlocal model1_score, model2_score, draws
             
@@ -454,14 +457,14 @@ def ai_battle():
                     sheets_manager.log_victory(
                         model_name=model2_name,
                         score=f"{model2_score}-{model1_score}",
-                        ip_address=request.remote_addr
+                        ip_address=ip_address
                     )
                 elif model2_name == 'DennisBot' and model1_score > model2_score:
                     # DennisBot was model2 and lost
                     sheets_manager.log_victory(
                         model_name=model1_name,
                         score=f"{model1_score}-{model2_score}",
-                        ip_address=request.remote_addr
+                        ip_address=ip_address
                     )
             
             # Yield final result

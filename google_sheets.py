@@ -69,52 +69,48 @@ class GoogleSheetsService:
             logger.error(f"Error initializing Google Sheets service: {str(e)}")
             raise
 
-    def log_victory(self, model_name, score=None, ip_address=None, timestamp=None):
+    def log_victory(self, model_name, score, ip_address):
+        """Log a victory against DennisBot to Google Sheets"""
         try:
-            if timestamp is None:
-                timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            
-            logger.info(f"Logging victory for model: {model_name} at {timestamp}")
-            
             # Get the spreadsheet ID from environment variable
             spreadsheet_id = os.getenv('GOOGLE_SHEETS_ID')
             if not spreadsheet_id:
                 raise ValueError("GOOGLE_SHEETS_ID environment variable not set")
             
-            logger.info(f"Using spreadsheet ID: {spreadsheet_id}")
+            # First, check if the model name already exists in the sheet
+            result = self.service.spreadsheets().values().get(
+                spreadsheetId=spreadsheet_id,
+                range='Sheet1!A:A'  # Check only the model name column
+            ).execute()
             
-            # Prepare the data to append in the specified order
-            values = [[
-                model_name,    # Column A: Model Name
-                score or "",   # Column B: Score
-                timestamp,     # Column C: Timestamp
-                ip_address or ""  # Column D: IP Address
-            ]]
+            values = result.get('values', [])
+            if values:
+                # Check if model_name exists in the first column
+                existing_models = [row[0] for row in values]
+                if model_name in existing_models:
+                    logger.info(f"Model {model_name} already exists in the sheet. Skipping duplicate entry.")
+                    return
             
-            # Append the data to the sheet
+            # If model doesn't exist, proceed with logging
+            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            values = [[model_name, score, timestamp, ip_address]]
+            
             body = {
                 'values': values
             }
             
-            try:
-                result = self.service.spreadsheets().values().append(
-                    spreadsheetId=spreadsheet_id,
-                    range='Sheet1!A:D',  # Updated range to include all columns
-                    valueInputOption='RAW',
-                    insertDataOption='INSERT_ROWS',
-                    body=body
-                ).execute()
-                
-                logger.info(f"Successfully logged victory: {result}")
-                return True
-            except Exception as api_error:
-                logger.error(f"Google Sheets API Error: {str(api_error)}")
-                if hasattr(api_error, 'resp'):
-                    logger.error(f"API Response: {api_error.resp}")
-                raise
+            result = self.service.spreadsheets().values().append(
+                spreadsheetId=spreadsheet_id,
+                range='Sheet1!A:D',
+                valueInputOption='USER_ENTERED',
+                body=body
+            ).execute()
+            
+            logger.info(f"Successfully logged victory for {model_name} to Google Sheets")
+            return result
             
         except Exception as e:
-            logger.error(f"Error logging victory: {str(e)}")
+            logger.error(f"Error logging victory to Google Sheets: {str(e)}")
             raise
 
 # Create a singleton instance
