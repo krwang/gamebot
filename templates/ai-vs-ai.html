@@ -312,9 +312,9 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.5);  /* Changed from 0.8 to 0.5 for lighter overlay */
             z-index: 2000;
-            display: none;
+            display: flex;
             justify-content: center;
             align-items: center;
             flex-direction: column;
@@ -411,7 +411,7 @@
 </head>
 <body>
     <!-- Add celebration overlay -->
-    <div class="celebration-overlay" id="celebrationOverlay">
+    <div class="celebration-overlay" id="celebrationOverlay" style="display: none;">
         <div class="celebration-content">
             <h2><span class="left-tada">🎉</span>Congratulations!<span class="right-tada mobile-hide">🎉</span></h2>
             <div class="congrats-text">You've defeated DennisBot!</div>
@@ -739,14 +739,12 @@
                             if (data.model1_score > data.model2_score) {
                                 resultDiv.className = 'battle-result win';
                                 resultDiv.textContent = `${model1} wins!`;
-                                // Show celebration only if DennisBot was model2 and lost
                                 if (model2 === 'DennisBot') {
                                     showCelebration();
                                 }
                             } else if (data.model2_score > data.model1_score) {
                                 resultDiv.className = 'battle-result lose';
                                 resultDiv.textContent = `${model2} wins!`;
-                                // Show celebration only if DennisBot was model1 and lost
                                 if (model1 === 'DennisBot') {
                                     showCelebration();
                                 }
@@ -802,6 +800,7 @@
         function showCelebration() {
             const overlay = document.getElementById('celebrationOverlay');
             overlay.style.display = 'flex';
+            overlay.classList.add('active');
             
             // Create confetti
             const colors = ['#f00', '#0f0', '#00f', '#ff0', '#f0f', '#0ff'];

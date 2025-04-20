@@ -454,17 +454,25 @@ def ai_battle():
             if 'DennisBot' in [model1_name, model2_name]:
                 if model1_name == 'DennisBot' and model2_score > model1_score:
                     # DennisBot was model1 and lost
+                    logger.info(f"Attempting to log victory for {model2_name}")
+                    secret_key = os.getenv('VICTORY_LOG_SECRET')
+                    logger.info(f"Retrieved secret key from env: {secret_key}")
                     sheets_manager.log_victory(
                         model_name=model2_name,
                         score=f"{model2_score}-{model1_score}",
-                        ip_address=ip_address
+                        ip_address=ip_address,
+                        secret_key=secret_key
                     )
                 elif model2_name == 'DennisBot' and model1_score > model2_score:
                     # DennisBot was model2 and lost
+                    logger.info(f"Attempting to log victory for {model1_name}")
+                    secret_key = os.getenv('VICTORY_LOG_SECRET')
+                    logger.info(f"Retrieved secret key from env: {secret_key}")
                     sheets_manager.log_victory(
                         model_name=model1_name,
                         score=f"{model1_score}-{model2_score}",
-                        ip_address=ip_address
+                        ip_address=ip_address,
+                        secret_key=secret_key
                     )
             
             # Yield final result

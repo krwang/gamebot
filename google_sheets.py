@@ -69,9 +69,22 @@ class GoogleSheetsService:
             logger.error(f"Error initializing Google Sheets service: {str(e)}")
             raise
 
-    def log_victory(self, model_name, score, ip_address):
+    def log_victory(self, model_name, score, ip_address, secret_key):
         """Log a victory against DennisBot to Google Sheets"""
         try:
+            # Verify the secret key
+            expected_key = os.getenv('VICTORY_LOG_SECRET')
+            logger.info(f"Expected key: {expected_key}")
+            logger.info(f"Provided key: {secret_key}")
+            
+            if not expected_key:
+                logger.error("VICTORY_LOG_SECRET environment variable is not set")
+                return
+                
+            if secret_key != expected_key:
+                logger.error(f"Secret key mismatch. Expected: {expected_key}, Got: {secret_key}")
+                return
+            
             # Get the spreadsheet ID from environment variable
             spreadsheet_id = os.getenv('GOOGLE_SHEETS_ID')
             if not spreadsheet_id:
