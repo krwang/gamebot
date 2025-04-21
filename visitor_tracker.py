@@ -4,6 +4,7 @@ from flask import request, make_response
 import os
 from pathlib import Path
 import uuid
+import pytz
 
 class VisitorTracker:
     def __init__(self):
@@ -51,14 +52,33 @@ class VisitorTracker:
             
         return visitor_id
         
+    def _is_bot(self, user_agent):
+        """Check if the request is likely from a bot"""
+        bot_indicators = [
+            'bot', 'crawler', 'spider', 'slurp', 'curl', 'wget', 
+            'python-requests', 'apache-httpclient', 'java', 'ruby',
+            'phantomjs', 'headless', 'selenium'
+        ]
+        
+        # Check for suspicious user agent patterns
+        user_agent = user_agent.lower()
+        return any(indicator in user_agent for indicator in bot_indicators)
+        
     def track_visit(self):
         """Track a visitor and store their information"""
         visitor_id = self._get_visitor_id()
         ip = request.remote_addr
         user_agent = request.user_agent.string
         path = request.path
-        timestamp = datetime.utcnow()
         
+        # Get current time in UTC
+        utc = pytz.UTC
+        timestamp = datetime.now(utc)
+        
+        # Skip tracking if it's likely a bot
+        if self._is_bot(user_agent):
+            return
+            
         conn = sqlite3.connect(str(self.db_path))
         cursor = conn.cursor()
         
